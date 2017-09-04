@@ -4,6 +4,12 @@
 import logging
 import os
 import random
+import pandas
+import io
+import sklearn
+import sklearn.linear_model
+import matplotlib
+import matplotlib.pyplot
 
 class DictReader(object):
 	def __init__(self):
@@ -35,21 +41,22 @@ class DictReader(object):
 class DataCreator(object):
 	def readRandomLines(self, dictReader):
 		# 随机读取cHanziLines条词 和 cPinyinLines条拼音，返回它们对应的字节数
-		cHanziLines = int(len(dictReader.lineData) * random.random())
+		weight = 0.01 	# 随机读取的词条数占总词条数的比例关系
+		cHanziLines = int(len(dictReader.lineData) * random.random() * weight)
 		lineData = dictReader.ReadRandomLines(cHanziLines)
 		hanziString = ''
 		for (hanzi, pinyin) in lineData:
 			hanziString += hanzi
-			# logging.debug('%d %s' % (len(hanzi.encode('utf-8')), hanzi))
-		cbHanzi = len(hanziString.encode('utf-8'))
+			# logging.debug('%d %s' % (len(hanzi), hanzi))
+		cbHanzi = len(hanziString)
 
 		pinyinString = ''
-		cPinyinLines = int(len(dictReader.lineData) * random.random())
+		cPinyinLines = int(len(dictReader.lineData) * random.random()* weight)
 		lineData = dictReader.ReadRandomLines(cPinyinLines)
 		for (hanzi, pinyin) in lineData:
 			pinyinString += pinyin
 			# logging.debug('%d %s' % (len(pinyin.encode('utf-8')), pinyin))
-		cbPinyin = len(pinyinString.encode('utf-8'))
+		cbPinyin = len(pinyinString)
 
 		return (cHanziLines, cPinyinLines, cbHanzi, cbPinyin)
 
@@ -75,11 +82,57 @@ class DataCreator(object):
 def SingleFeatureLearning():
 	# 单变量线性回归学习过程
     dc = DataCreator()
-    samples = dc.CreateSampleForSingleFeature(10)
-    logging.debug(' lines    bytes')
-    logging.debug('-------  -------')
+    # 生成训练样本
+    cSamples = 30		# 训练样本个数
+    samples = dc.CreateSampleForSingleFeature(cSamples) 
+
+    csvData = 'lines,bytes\n'
     for s in samples:
-    	logging.debug('%7d %7d' % (s[0], s[1]))
+    	csvData += '%d,%d\n' % (s[0], s[1])
+
+    # 将训练样本读入dataFrame
+    dataFrame = pandas.read_csv(io.StringIO(csvData.decode('utf-8')))
+    logging.debug(dataFrame)
+
+    # 建立线性回归模型
+    regr = sklearn.linear_model.LinearRegression()
+
+    # 拟合
+    regr.fit(dataFrame['lines'].values.reshape(-1, 1), dataFrame['bytes']) # reshape(-1, 1)是什么意思？
+
+    # 生成测试样本
+    cSample = 5			# 测试样本个数
+    samples = dc.CreateSampleForSingleFeature(cSample)
+    csvTestData = 'lines,bytes\n'
+    for s in samples:
+    	csvTestData += '%d,%d\n' % (s[0], s[1])
+
+    # 将训练样本读入dataFrame
+    testDataFrame = pandas.read_csv(io.StringIO(csvTestData.decode('utf-8')))
+    print(testDataFrame)
+
+    # 预测10000条词的大小
+    logging.debug(regr.predict(10000))
+
+    # 画图
+    # 1. 训练样本的点
+    matplotlib.pyplot.scatter(dataFrame['lines'], dataFrame['bytes'], color='blue')
+
+    # 2. 测试样本的点
+    matplotlib.pyplot.scatter(testDataFrame['lines'], testDataFrame['bytes'], marker='x', color='green')
+
+    # 3. 拟合直线
+    matplotlib.pyplot.plot(dataFrame['lines'], regr.predict(dataFrame['lines'].values.reshape(-1, 1)), color='red')
+
+    # 
+    matplotlib.pyplot.title('words num - file bytes relationship')
+    matplotlib.pyplot.ylabel('file bytes')
+    matplotlib.pyplot.xlabel('words num')
+
+    matplotlib.pyplot.xlim(0)
+    matplotlib.pyplot.ylim(0)
+
+    matplotlib.pyplot.show()
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
