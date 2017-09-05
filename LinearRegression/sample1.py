@@ -70,7 +70,7 @@ class DataCreator(object):
 		return result
 
 
-	def CreateSampleForDoubleFeature(self, nSample):
+	def CreateSampleForDoubleFeatures(self, nSample):
 		# 产生nSample个样本：[(中文词条数，拼音条数， 文件大小), *]
 		result = []
 		dictReader = DictReader()
@@ -134,8 +134,67 @@ def SingleFeatureLearning():
 
     matplotlib.pyplot.show()
 
+class DoubleFeatureLearning(object):
+	def createSampleDataFrame(self, dataCreator, cSamples):
+	    samples = dataCreator.CreateSampleForDoubleFeatures(cSamples) 
+
+	    csvData = 'hanziLines,pinyinLines,bytes\n'
+	    for s in samples:
+	    	csvData += '%d,%d,%d\n' % (s[0], s[1], s[2])
+
+	    # 将训练样本读入dataFrame
+	    dataFrame = pandas.read_csv(io.StringIO(csvData.decode('utf-8')))
+	    # logging.debug(dataFrame)
+	    return dataFrame
+
+	def Main(self):
+		# 二元线性回归学习过程
+	    dataCreator = DataCreator()
+	    # 生成训练样本
+	    trainingDataFrame = self.createSampleDataFrame(dataCreator, 30)
+
+	    # 建立线性回归模型
+	    regr = sklearn.linear_model.LinearRegression()
+
+	    # 拟合
+	    regr.fit(trainingDataFrame[['hanziLines', 'pinyinLines']].values.reshape(-1, 2), trainingDataFrame['bytes'])
+
+	    # 生成测试样本
+	    testingDataFrame = self.createSampleDataFrame(dataCreator, 5)
+
+	    # 验证预测
+	    for testingSample in testingDataFrame.values:
+	    	hanziLines = testingSample[0]
+	    	pinyinLines = testingSample[1]
+	    	bytes = testingSample[2]
+	    	predictBytes = regr.predict(testingDataFrame[['hanziLines', 'pinyinLines']].values.reshape(-1, 2))
+	    	print('[%d, %d, %d]' % (hanziLines, pinyinLines, bytes))
+	    	print(predictBytes)
+	    # logging.debug(regr.predict(10000))
+
+	    # # 画图
+	    # # 1. 训练样本的点
+	    # matplotlib.pyplot.scatter(dataFrame['lines'], dataFrame['bytes'], color='blue')
+
+	    # # 2. 测试样本的点
+	    # matplotlib.pyplot.scatter(testDataFrame['lines'], testDataFrame['bytes'], marker='x', color='green')
+
+	    # # 3. 拟合直线
+	    # matplotlib.pyplot.plot(dataFrame['lines'], regr.predict(dataFrame['lines'].values.reshape(-1, 1)), color='red')
+
+	    # # 
+	    # matplotlib.pyplot.title('words num - file bytes relationship')
+	    # matplotlib.pyplot.ylabel('file bytes')
+	    # matplotlib.pyplot.xlabel('words num')
+
+	    # matplotlib.pyplot.xlim(0)
+	    # matplotlib.pyplot.ylim(0)
+
+	    matplotlib.pyplot.show()
+
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=logFmt, datefmt='%H:%M',)
     
-    SingleFeatureLearning()
+    learner = DoubleFeatureLearning()
+    learner.Main()
