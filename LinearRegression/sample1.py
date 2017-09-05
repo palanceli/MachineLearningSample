@@ -10,6 +10,8 @@ import sklearn
 import sklearn.linear_model
 import matplotlib
 import matplotlib.pyplot
+import mpl_toolkits.mplot3d
+import numpy
 
 class DictReader(object):
 	def __init__(self):
@@ -163,33 +165,35 @@ class DoubleFeatureLearning(object):
 	    testingDataFrame = self.createSampleDataFrame(dataCreator, 5)
 
 	    # 验证预测
-	    for testingSample in testingDataFrame.values:
-	    	hanziLines = testingSample[0]
-	    	pinyinLines = testingSample[1]
-	    	bytes = testingSample[2]
-	    	predictBytes = regr.predict(testingDataFrame[['hanziLines', 'pinyinLines']].values.reshape(-1, 2))
-	    	print('[%d, %d, %d]' % (hanziLines, pinyinLines, bytes))
-	    	print(predictBytes)
-	    # logging.debug(regr.predict(10000))
+	    predictBytes = regr.predict(testingDataFrame[['hanziLines', 'pinyinLines']].values.reshape(-1, 2))
+	    print(predictBytes)
 
-	    # # 画图
-	    # # 1. 训练样本的点
-	    # matplotlib.pyplot.scatter(dataFrame['lines'], dataFrame['bytes'], color='blue')
 
-	    # # 2. 测试样本的点
-	    # matplotlib.pyplot.scatter(testDataFrame['lines'], testDataFrame['bytes'], marker='x', color='green')
+	    # 打印测试样本和预测结果
+	    print(pandas.concat([testingDataFrame, pandas.Series(predictBytes, name="predict")], axis=1))
 
-	    # # 3. 拟合直线
-	    # matplotlib.pyplot.plot(dataFrame['lines'], regr.predict(dataFrame['lines'].values.reshape(-1, 1)), color='red')
+	    # 画图
+	    fig = matplotlib.pyplot.figure()
+	    ax = mpl_toolkits.mplot3d.Axes3D(fig)
+	    # 绘制训练样本
+	    ax.scatter(trainingDataFrame['hanziLines'], trainingDataFrame['pinyinLines'], trainingDataFrame['bytes'])
+	    # 绘制测试样本
+	    ax.scatter(testingDataFrame['hanziLines'], testingDataFrame['pinyinLines'], testingDataFrame['bytes'], marker='+', color='red')
+	    # 绘制预测样本
+	    ax.scatter(testingDataFrame['hanziLines'], testingDataFrame['pinyinLines'], predictBytes, marker='X', color='green')
 
-	    # # 
-	    # matplotlib.pyplot.title('words num - file bytes relationship')
-	    # matplotlib.pyplot.ylabel('file bytes')
-	    # matplotlib.pyplot.xlabel('words num')
+	    # 绘制预测平面
+	    xSurf, ySurf = numpy.meshgrid(numpy.linspace(trainingDataFrame['hanziLines'].min(), trainingDataFrame['hanziLines'].max(), 100),
+	    	numpy.linspace(trainingDataFrame['pinyinLines'].min(), trainingDataFrame['pinyinLines'].max(), 100))
 
-	    # matplotlib.pyplot.xlim(0)
-	    # matplotlib.pyplot.ylim(0)
-
+	    zSurf = predictBytes[0] * xSurf + predictBytes[1] * ySurf + predictBytes[2]
+	    # ax.plot_surface(xSurf, ySurf, zSurf, color='None', alpha = 0.4)
+	    
+	    # 设置坐标轴
+	    matplotlib.pyplot.title('[hanziLines, pinyinLines] - file bytes relationship')
+	    ax.set_xlabel('hanziLines')
+	    ax.set_ylabel('pinyinLines')
+	    ax.set_zlabel('bytes')
 	    matplotlib.pyplot.show()
 
 if __name__ == '__main__':
