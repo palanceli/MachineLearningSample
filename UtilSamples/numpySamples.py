@@ -15,12 +15,15 @@ class samples(object):
 		logging.debug('生成[1, 8]的等差数列：')
 		x = numpy.linspace(1, 8, 8)
 		print(x)
+		print('\n')
 
-		logging.debug('reshape成2*4的矩阵：')
+		logging.debug('reshape(2*4) 的矩阵：')
 		print(x.reshape((2, 4)))
+		print('\n')
 		
-		logging.debug('reshape成2*2*2的矩阵：')
+		logging.debug('reshape(2*2*2) 的矩阵：')
 		print(x.reshape((2, 2, 2)))
+		print('\n')
 
 		logging.debug('reshape后的数组和原数组共享一段内存，如果原数组内容变化，变形后的一会变：')
 		y = x.reshape(2, 4)
@@ -29,9 +32,11 @@ class samples(object):
 		print(y)
 		logging.debug('x:')
 		print(x)
+		print('\n')
 
 		logging.debug('reshape的值为-1，会根据数组长度和剩余维度中推断出来：')
 		print(x.reshape(-1, 2, 2))
+		print('\n')
 
 	def case0601(self):
 		# 各种几何图形
