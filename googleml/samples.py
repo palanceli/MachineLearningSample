@@ -2,6 +2,7 @@
 # -*- coding:utf-8 -*-
 
 import logging
+import unittest
 
 import math
 
@@ -13,7 +14,7 @@ import numpy as np
 import pandas as pd
 from sklearn import metrics
 import tensorflow as tf
-from tensorflow.python.data import Dataset
+# from tensorflow.python.data import Dataset
 
 class samples(unittest.TestCase):
     def setUp(self):
@@ -26,11 +27,11 @@ class samples(unittest.TestCase):
 
 class first_stpes_with_tf(samples):
 	def case(self):
-		pass
+		california_housing_dataframe = pd.read_csv("./california_housing_train.csv", sep=",")
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=logFmt, datefmt='%H:%M',)
     
-    learner = DoubleFeatureLearning()
-    learner.Main()
+    unittest.main
+    # cmd: python -m unittest samples.Chapter4.case4
