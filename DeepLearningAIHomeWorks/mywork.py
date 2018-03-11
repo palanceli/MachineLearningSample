@@ -49,6 +49,7 @@ class Coding1_1(CodingWorks):
     def setUp(self):
         super().setUp()
         self.datasetsDir = os.path.join(self.rootDir, 'coding1_1/datasets/')
+        self.imagesDir = os.path.join(self.rootDir, 'coding1_1/images/')
         self.trainDatasetPath = os.path.join(self.datasetsDir, 'train_catvnoncat.h5')
         self.testDatasetPath = os.path.join(self.datasetsDir, 'test_catvnoncat.h5')
 
@@ -227,9 +228,10 @@ class Coding1_1(CodingWorks):
         ### START CODE HERE ###
         
         # initialize parameters with zeros (≈ 1 line of code)
-        w, b = self.initialize_with_zeros(X_train.shape[0])
+        w, b = self.initialize_with_zeros(X_train.shape[0]) # w元素个数等于特征数，b是一个实数，它们的值都为0
 
         # Gradient descent (≈ 1 line of code)
+        # 学习率为learning_rate，经过num_iterations轮迭代，获得模型参数
         parameters, grads, costs = self.optimize(w, b, X_train, Y_train, num_iterations, learning_rate, print_cost=True)
         
         # Retrieve parameters w and b from dictionary "parameters"
@@ -237,6 +239,7 @@ class Coding1_1(CodingWorks):
         b = parameters["b"]
         
         # Predict test/train set examples (≈ 2 lines of code)
+        # 验证模型在训练集和测试集上的准确率
         Y_prediction_test = self.predict(w, b, X_test)
         Y_prediction_train = self.predict(w, b, X_train)
 
@@ -262,6 +265,7 @@ class Coding1_1(CodingWorks):
         '''
         2 - Overview of the Problem set
         '''
+        # 返回训练样本和测试样本的数据、标注，classes是标注对应的含义
         train_set_x_orig, train_set_y, test_set_x_orig, test_set_y, classes = self.load_dataset()
         index = 16
 
@@ -275,9 +279,9 @@ class Coding1_1(CodingWorks):
 
         # 打印训练集、测试集的样本个数、像素数、通道数，以及标注数据的个数
         ### START CODE HERE ### (≈ 3 lines of code)
-        m_train = train_set_x_orig.shape[0]
-        m_test = test_set_x_orig.shape[0]
-        num_px = train_set_x_orig.shape[1]
+        m_train = train_set_x_orig.shape[0]     # 训练样本的个数
+        m_test = test_set_x_orig.shape[0]       # 测试样本的个数
+        num_px = train_set_x_orig.shape[1]      # 图片的宽、高像素数
         ### END CODE HERE ###
         logging.info ("Number of training examples: m_train = " + str(m_train))
         logging.info ("Number of testing examples: m_test = " + str(m_test))
@@ -288,9 +292,9 @@ class Coding1_1(CodingWorks):
         logging.info ("test_set_x shape: " + str(test_set_x_orig.shape))
         logging.info ("test_set_y shape: " + str(test_set_y.shape))
 
-        # 将训练样本和测试样本扁平化，对于每一张图，将 (64, 64, 3) 的图片转成(64*64*3, 1)
-        # 对于整个训练样本，将(209, 64, 64, 3)转成(209, -1).T为什么要转置呢？？？
-        # 转后每块数据209个点，第一块数据表示所有图片的R1，第二块数据表示所有图片的G1...
+        # 将训练和测试样本扁平化，对于每一张图，将 (64, 64, 3) 的图片转成(64*64*3, 1)
+        # 对于整个训练样本，将(209, 64, 64, 3)转成(209, -1).T，注意有个转置，转置后每一列是一个样本，
+        # 某列的每一行是图片的一个特征。训练集共209行（个样本），12288个特征。参见笔记2.1。
         ### START CODE HERE ### (≈ 2 lines of code)
         train_set_x_flatten = train_set_x_orig.reshape(train_set_x_orig.shape[0],-1).T
         test_set_x_flatten = test_set_x_orig.reshape(test_set_x_orig.shape[0],-1).T
@@ -302,18 +306,19 @@ class Coding1_1(CodingWorks):
         logging.info ("test_set_y shape: " + str(test_set_y.shape))
         logging.info ("sanity check after reshaping: " + str(train_set_x_flatten[0:5,0]))
 
-        # 标准化数据
+        # 标准化数据，让每个元素∈[0, 1]
         train_set_x = train_set_x_flatten / 255.
         test_set_x = test_set_x_flatten / 255.
 
+        # 训练出模型
         d = self.model(train_set_x, train_set_y, test_set_x, test_set_y, num_iterations = 2000, learning_rate = 0.005, print_cost = True)
 
-        index = 5
-        plt.imshow(test_set_x[:,index].reshape((num_px, num_px, 3)))
-        msgString = 'y = %s' % (str(test_set_y[0,index]))
-        msgString += ', you predicted that it is a %s picture.' % (classes["Y_prediction_test"][0,index].decode("utf-8"))
-        logging.info ( msgString)
-        plt.show()
+        # 验证模型
+        fname = os.path.join(self.imagesDir, 'my_image2.jpg')
+        image = np.array(ndimage.imread(fname, flatten=False))
+        my_image = scipy.misc.imresize(image, size=(num_px, num_px)).reshape((1, num_px*num_px*3)).T
+        my_predicted_image = self.predict(d['w'], d['b'], my_image)
+        logging.info(my_predicted_image)
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
