@@ -166,7 +166,7 @@ class Coding1_1(CodingWorks):
         for i in range(num_iterations):
             # Cost and gradient calculation (≈ 1-4 lines of code)
             ### START CODE HERE ### 
-            grads, cost = self.propagate(w, b, X, Y)
+            grads, cost = self.propagate(w, b, X, Y) # 一次梯度下降
             ### END CODE HERE ###
             
             # Retrieve derivatives from grads
@@ -228,7 +228,7 @@ class Coding1_1(CodingWorks):
         ### START CODE HERE ###
         
         # initialize parameters with zeros (≈ 1 line of code)
-        w, b = self.initialize_with_zeros(X_train.shape[0]) # w元素个数等于特征数，b是一个实数，它们的值都为0
+        w, b = self.initialize_with_zeros(X_train.shape[0]) # w元素个数等于特征数，b是一个实数，将他们初始化为0
 
         # Gradient descent (≈ 1 line of code)
         # 学习率为learning_rate，经过num_iterations轮迭代，获得模型参数
@@ -249,7 +249,7 @@ class Coding1_1(CodingWorks):
         print("train accuracy: {} %".format(100 - np.mean(np.abs(Y_prediction_train - Y_train)) * 100))
         print("test accuracy: {} %".format(100 - np.mean(np.abs(Y_prediction_test - Y_test)) * 100))
 
-        
+        # 这是构成模型的全部元素，对未来有用的就是w和b
         d = {"costs": costs,
              "Y_prediction_test": Y_prediction_test, 
              "Y_prediction_train" : Y_prediction_train, 
