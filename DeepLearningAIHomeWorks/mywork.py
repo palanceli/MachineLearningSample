@@ -17,12 +17,17 @@ import matplotlib.pyplot as plt
 import scipy
 from PIL import Image
 from scipy import ndimage
+import sklearn
+import sklearn.datasets
+import sklearn.linear_model
 
 class CodingWorks(unittest.TestCase):
     def setUp(self):
         logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
         logging.basicConfig(level=logging.DEBUG, format=logFmt, datefmt='%H:%M',)
         self.rootDir = os.path.join(os.path.expanduser('~'), 'Documents/DeepLearningAI作业/')
+        np.random.seed(1)
+        plt.switch_backend('Qt5Agg') # 在独立窗口中弹出绘图，而不是和命令行共用一个窗口
 
     def showH5Group(self, groupObj):
         logging.info('group name:%s, shape:%s' % (groupObj.name, groupObj.shape))
@@ -261,7 +266,6 @@ class Coding1_1(CodingWorks):
         return d
 
     def Main(self):
-        plt.switch_backend('Qt5Agg')
         '''
         2 - Overview of the Problem set
         '''
@@ -319,6 +323,119 @@ class Coding1_1(CodingWorks):
         my_image = scipy.misc.imresize(image, size=(num_px, num_px)).reshape((1, num_px*num_px*3)).T
         my_predicted_image = self.predict(d['w'], d['b'], my_image)
         logging.info(my_predicted_image)
+
+class Coding1_2(CodingWorks):
+    def load_planar_dataset(self):
+        np.random.seed(1)
+        m = 400 # 样本个数
+        N = int(m/2) # 每类样本个数
+        D = 2 # 每个样本的维度
+        X = np.zeros((m,D)) # data matrix where each row is a single example
+        Y = np.zeros((m,1), dtype='uint8') # labels vector (0 for red, 1 for blue)
+        a = 4 # maximum ray of the flower
+
+        for j in range(2):
+            ix = range(N * j, N * (j + 1))
+            # 生成N个等差数列 + N个随机数
+            t = np.linspace(j * 3.12, (j + 1) * 3.12, N) + np.random.randn(N) * 0.2 # theta
+            r = a * np.sin(4 * t) + np.random.randn(N) * 0.2 # radius
+            X[ix] = np.c_[r * np.sin(t), r * np.cos(t)]
+            Y[ix] = j
+            
+        X = X.T
+        Y = Y.T
+
+        return X, Y.reshape(m)
+
+    def plot_decision_boundary(self, model, X, y):
+        # Set min and max values and give it some padding
+        x_min, x_max = X[0, :].min() - 1, X[0, :].max() + 1
+        y_min, y_max = X[1, :].min() - 1, X[1, :].max() + 1
+        h = 0.01
+        # Generate a grid of points with distance h between them
+        # np.arange三个参数分别为start, stop, step @tc1
+        xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+
+        # Predict the function value for the whole grid
+        Z = model(np.c_[xx.ravel(), yy.ravel()]) # 输入网格纵横网格线的所有交汇点@tc3
+        Z = Z.reshape(xx.shape)
+        # Plot the contour and training examples
+        plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral)
+        plt.ylabel('x2')
+        plt.xlabel('x1')
+        plt.scatter(X[0, :], X[1, :], c=y, cmap=plt.cm.Spectral)
+
+
+    def Main(self):
+        # X是400个点，Y是400个颜色r/b值
+        X, Y = self.load_planar_dataset()
+        # 绘制这些点
+        plt.scatter(X[0, :], X[1, :], c=Y, s=40, cmap=plt.cm.Spectral)
+        ### START CODE HERE ### (≈ 3 lines of code)
+        shape_X = X.shape
+        shape_Y = Y.shape
+        m = shape_X[1]  # training set size
+        ### END CODE HERE ###
+
+        print ('The shape of X is: ' + str(shape_X))
+        print ('The shape of Y is: ' + str(shape_Y))
+        print ('I have m = %d training examples!' % (m))
+        # Train the logistic regression classifier
+        clf = sklearn.linear_model.LogisticRegressionCV();
+        clf.fit(X.T, Y.T.ravel()); # ravel()函数是将矩阵降成1维
+
+        # Plot the decision boundary for logistic regression
+        self.plot_decision_boundary(lambda x: clf.predict(x), X, Y)
+        plt.title("Logistic Regression")
+
+        # Print accuracy
+        LR_predictions = clf.predict(X.T)
+        print ('Accuracy of logistic regression: %d ' % float((np.dot(Y,LR_predictions) + np.dot(1-Y,1-LR_predictions))/float(Y.size)*100) +
+               '% ' + "(percentage of correctly labelled datapoints)")
+
+
+        plt.show()
+
+    def tc1(self):
+        # 验证np.meshgrid的作用
+        nx, ny = (3, 2)
+        x = np.linspace(0, 1, nx)   # 将x轴[0, 1]分3份，画分割线
+        y = np.linspace(0, 1, ny)   # 将y轴[0, 1]分2份，画分割线
+        xv, yv = np.meshgrid(x, y)  # 计算纵横分割线的交叉点
+
+        logging.info(x)
+        logging.info(y)
+        logging.info(xv)
+        logging.info(yv)
+
+    def tc2(self):
+        # 验证数列生成的几种方式
+        x = np.linspace(0, 10, 2)   # 将[1, 10]分成2份
+        logging.info(x)
+        x = np.arange(0, 10, 2)     # 将[1, 10]按步长为2分成若干份
+        logging.info(x)
+
+    def tc3(self):
+        # 验证np.c_的作用
+        # 将方括号内的所有参数脱掉1层，依次取各参数的第1、2...n个元素，组成新的元组
+        # [[1, 2, 3]], [[4, 5, 6]], 7, 8 ->[1, 2, 3, 4, 5, 6, 7, 8]
+        logging.info(np.c_[np.array([[1, 2, 3]]), np.array([[4, 5, 6]]), 7, 8])
+        # [1, 2, 3], [4, 5, 6], [7, 8, 9] -> [1, 4, 7], [2, 5, 8], [3, 6, 9]
+        logging.info(np.c_[np.array([1, 2, 3]), np.array([4, 5, 6]), np.array([7, 8, 9])])
+
+    def tc4(self):
+        # 检验contourf，绘制等高线，x、y表示二维坐标，z表示每个坐标点的高度
+        x, y = np.meshgrid(np.arange(0, 4, 1), np.arange(0, 4, 1))
+        z = np.array([1, 1, 1, 1,
+            1, 1, 1, 0,
+            1, 1, 0, 0,
+            1, 0, 0, 0]).reshape(x.shape)
+        plt.contourf(x, y, z, cmap=plt.cm.Spectral)
+
+        logging.info(x)
+        logging.info(y)
+        logging.info(z)
+        plt.show()
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
