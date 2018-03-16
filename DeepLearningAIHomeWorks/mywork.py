@@ -370,6 +370,7 @@ class Coding1_2(CodingWorks):
         X, Y = self.load_planar_dataset()
         # 绘制这些点
         plt.scatter(X[0, :], X[1, :], c=Y.reshape(X.shape[1]), s=40, cmap=plt.cm.Spectral)
+
         ### START CODE HERE ### (≈ 3 lines of code)
         shape_X = X.shape
         shape_Y = Y.shape
