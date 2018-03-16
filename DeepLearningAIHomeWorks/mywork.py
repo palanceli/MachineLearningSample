@@ -50,6 +50,10 @@ class CodingWorks(unittest.TestCase):
                 self.showH5Dataset(h5[key])
         return h5
 
+    def sigmoid(self, z):
+        s = 1 / (1 + np.exp(-z))
+        return s
+
 class Coding1_1(CodingWorks):
     def setUp(self):
         super().setUp()
@@ -113,12 +117,6 @@ class Coding1_1(CodingWorks):
         value:[1 1 1 ... 1 1 0]
         '''
 
-    def sigmoid(self, z):
-        '''
-        4.1 - Helper functions
-        '''
-        s = 1 / (1 + np.exp(-z))
-        return s
 
     '''
     4.2 - Initializing parameters
@@ -477,7 +475,7 @@ class Coding1_2(CodingWorks):
         Z1 = np.dot(W1,X) + b1
         A1 = np.tanh(Z1)
         Z2 = np.dot(W2,A1) + b2
-        A2 = sigmoid(Z2)
+        A2 = self.sigmoid(Z2)
         ### END CODE HERE ###
         
         assert(A2.shape == (1, X.shape[1]))
@@ -559,10 +557,136 @@ class Coding1_2(CodingWorks):
                  "db2": db2}
         
         return grads
+
+    def update_parameters(self, parameters, grads, learning_rate = 1.2):
+        """
+        Updates parameters using the gradient descent update rule given above
         
+        Arguments:
+        parameters -- python dictionary containing your parameters 
+        grads -- python dictionary containing your gradients 
+        
+        Returns:
+        parameters -- python dictionary containing your updated parameters 
+        """
+        # Retrieve each parameter from the dictionary "parameters"
+        ### START CODE HERE ### (≈ 4 lines of code)
+        W1 = parameters["W1"]
+        b1 = parameters["b1"]
+        W2 = parameters["W2"]
+        b2 = parameters["b2"]
+        ### END CODE HERE ###
+        
+        # Retrieve each gradient from the dictionary "grads"
+        ### START CODE HERE ### (≈ 4 lines of code)
+        dW1 = grads["dW1"]
+        db1 = grads["db1"]
+        dW2 = grads["dW2"]
+        db2 = grads["db2"]
+        ## END CODE HERE ###
+        
+        # Update rule for each parameter
+        ### START CODE HERE ### (≈ 4 lines of code)
+        W1 -= learning_rate * dW1
+        b1 -= learning_rate * db1
+        W2 -= learning_rate * dW2
+        b2 -= learning_rate * db2
+        ### END CODE HERE ###
+        
+        parameters = {"W1": W1,
+                      "b1": b1,
+                      "W2": W2,
+                      "b2": b2}
+        
+        return parameters
+
+    # 4.4 - Integrate parts 4.1, 4.2 and 4.3 in nn_model()
+    def nn_model(self, X, Y, n_h, num_iterations = 10000, print_cost=False):
+        """
+        Arguments:
+        X -- dataset of shape (2, number of examples)
+        Y -- labels of shape (1, number of examples)
+        n_h -- size of the hidden layer
+        num_iterations -- Number of iterations in gradient descent loop
+        print_cost -- if True, print the cost every 1000 iterations
+        
+        Returns:
+        parameters -- parameters learnt by the model. They can then be used to predict.
+        """
+        
+        np.random.seed(3)
+        n_x = self.layer_sizes(X, Y)[0]
+        n_y = self.layer_sizes(X, Y)[2]
+        
+        # Initialize parameters, then retrieve W1, b1, W2, b2. Inputs: "n_x, n_h, n_y". Outputs = "W1, b1, W2, b2, parameters".
+        ### START CODE HERE ### (≈ 5 lines of code)
+        parameters = self.initialize_parameters(n_x, n_h, n_y)
+        W1 = parameters["W1"]
+        b1 = parameters["b1"]
+        W2 = parameters["W2"]
+        b2 = parameters["b2"]
+        ### END CODE HERE ###
+        
+        # Loop (gradient descent)
+
+        for i in range(0, num_iterations):
+             
+            ### START CODE HERE ### (≈ 4 lines of code)
+            # Forward propagation. Inputs: "X, parameters". Outputs: "A2, cache".
+            A2, cache = self.forward_propagation(X, parameters)
+            
+            # Cost function. Inputs: "A2, Y, parameters". Outputs: "cost".
+            cost = self.compute_cost(A2, Y, parameters)
+     
+            # Backpropagation. Inputs: "parameters, cache, X, Y". Outputs: "grads".
+            grads = self.backward_propagation(parameters, cache, X, Y)
+     
+            # Gradient descent parameter update. Inputs: "parameters, grads". Outputs: "parameters".
+            parameters = self.update_parameters(parameters, grads,learning_rate = 1.2)
+            
+            ### END CODE HERE ###
+            
+            # Print the cost every 1000 iterations
+            if print_cost and i % 1000 == 0:
+                print ("Cost after iteration %i: %f" %(i, cost))
+
+        return parameters
+
+    # 4.5 Predictions
+    def predict(self, parameters, X):
+        """
+        Using the learned parameters, predicts a class for each example in X
+        
+        Arguments:
+        parameters -- python dictionary containing your parameters 
+        X -- input data of size (n_x, m)
+        
+        Returns
+        predictions -- vector of predictions of our model (red: 0 / blue: 1)
+        """
+        
+        # Computes probabilities using forward propagation, and classifies to 0/1 using 0.5 as the threshold.
+        ### START CODE HERE ### (≈ 2 lines of code)
+        A2, cache = self.forward_propagation(X, parameters)
+        predictions = (A2 > 0.5)
+        ### END CODE HERE ###
+        
+        return predictions
+
     def Main(self):
         # 使用双层神经网络生成分类器，将红豆和绿豆分开
-        pass
+        X, Y = self.load_planar_dataset()
+        # 绘制这些点
+        plt.scatter(X[0, :], X[1, :], c=Y, s=40, cmap=plt.cm.Spectral)
+
+        parameters = self.nn_model(X, Y, n_h = 4, num_iterations = 10000, print_cost=True)
+
+        # Plot the decision boundary
+        self.plot_decision_boundary(lambda x: self.predict(parameters, x.T), X, Y)
+        plt.title("Decision Boundary for hidden layer size " + str(4))
+
+        predictions = self.predict(parameters, X)
+        print ('Accuracy: %d' % float((np.dot(Y,predictions.T) + np.dot(1-Y,1-predictions.T))/float(Y.size)*100) + '%')
 
     def tc1(self):
         # 验证np.meshgrid的作用
