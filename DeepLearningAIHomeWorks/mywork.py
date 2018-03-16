@@ -343,7 +343,7 @@ class Coding1_2(CodingWorks):
         X = X.T
         Y = Y.T
 
-        return X, Y.reshape(m)
+        return X, Y
 
     def plot_decision_boundary(self, model, X, y):
         # Set min and max values and give it some padding
@@ -361,7 +361,7 @@ class Coding1_2(CodingWorks):
         plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral)
         plt.ylabel('x2')
         plt.xlabel('x1')
-        plt.scatter(X[0, :], X[1, :], c=y, cmap=plt.cm.Spectral)
+        plt.scatter(X[0, :], X[1, :], c=y.reshape(X.shape[1]), cmap=plt.cm.Spectral)
 
 
     def LogisticRegression(self):
@@ -369,7 +369,7 @@ class Coding1_2(CodingWorks):
         # X是400个点，Y是400个颜色r/b值
         X, Y = self.load_planar_dataset()
         # 绘制这些点
-        plt.scatter(X[0, :], X[1, :], c=Y, s=40, cmap=plt.cm.Spectral)
+        plt.scatter(X[0, :], X[1, :], c=Y.reshape(X.shape[1]), s=40, cmap=plt.cm.Spectral)
         ### START CODE HERE ### (≈ 3 lines of code)
         shape_X = X.shape
         shape_Y = Y.shape
@@ -626,6 +626,7 @@ class Coding1_2(CodingWorks):
         W2 = parameters["W2"]
         b2 = parameters["b2"]
         ### END CODE HERE ###
+        logging.info('W2.shape=(%d, %d)' % W2.shape)
         
         # Loop (gradient descent)
 
@@ -677,7 +678,7 @@ class Coding1_2(CodingWorks):
         # 使用双层神经网络生成分类器，将红豆和绿豆分开
         X, Y = self.load_planar_dataset()
         # 绘制这些点
-        plt.scatter(X[0, :], X[1, :], c=Y, s=40, cmap=plt.cm.Spectral)
+        plt.scatter(X[0, :], X[1, :], c=Y.reshape(X.shape[1]), s=40, cmap=plt.cm.Spectral)
 
         parameters = self.nn_model(X, Y, n_h = 4, num_iterations = 10000, print_cost=True)
 
@@ -687,6 +688,7 @@ class Coding1_2(CodingWorks):
 
         predictions = self.predict(parameters, X)
         print ('Accuracy: %d' % float((np.dot(Y,predictions.T) + np.dot(1-Y,1-predictions.T))/float(Y.size)*100) + '%')
+        plt.show()
 
     def tc1(self):
         # 验证np.meshgrid的作用
