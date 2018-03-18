@@ -740,6 +740,10 @@ class Coding1_3(CodingWorks):
         plt.rcParams['image.interpolation'] = 'nearest'
         plt.rcParams['image.cmap'] = 'gray'
 
+        self.trainDatasetPath = os.path.join(self.rootDir, 'coding1_3/datasets/train_catvnoncat.h5')
+        self.testDatasetPath = os.path.join(self.rootDir, 'coding1_3/datasets/test_catvnoncat.h5')
+        np.random.seed(1)
+
     def initialize_parameters_deep(self, layer_dims):
         """
         Arguments:
@@ -1097,6 +1101,60 @@ class Coding1_3(CodingWorks):
         ### END CODE HERE ###
             
         return parameters
+
+    def load_data(self):
+        train_dataset = h5py.File(self.trainDatasetPath, "r")
+        train_set_x_orig = np.array(train_dataset["train_set_x"][:]) # your train set features
+        train_set_y_orig = np.array(train_dataset["train_set_y"][:]) # your train set labels
+
+        test_dataset = h5py.File(self.testDatasetPath, "r")
+        test_set_x_orig = np.array(test_dataset["test_set_x"][:]) # your test set features
+        test_set_y_orig = np.array(test_dataset["test_set_y"][:]) # your test set labels
+
+        classes = np.array(test_dataset["list_classes"][:]) # the list of classes
+        
+        train_set_y_orig = train_set_y_orig.reshape((1, train_set_y_orig.shape[0]))
+        test_set_y_orig = test_set_y_orig.reshape((1, test_set_y_orig.shape[0]))
+        
+        return train_set_x_orig, train_set_y_orig, test_set_x_orig, test_set_y_orig, classes
+
+    def tc1(self):
+        ''' 查看训练集中第15张图 '''
+        train_x_orig, train_y, test_x_orig, test_y, classes = self.load_data()
+        index = 15
+        plt.imshow(train_x_orig[index])
+        msgString = "y = %s. It's a %s picture." % (str(train_y[0,index]), classes[train_y[0,index]].decode("utf-8"))
+        logging.info(msgString)
+        plt.show()
+
+    def tc2(self):
+        '''
+        训练集和测试集的结构相同，只是训练集有209个样本，测试集有50个样本
+        /list_classes, shape:(2,) 分类名称字典
+        value:[b'non-cat' b'cat']
+        /train_set_x, shape:(209, 64, 64, 3) 209张64×64×3的图片
+        value: ...
+        /train_set_y, shape:(209, ) 209个标注
+        value: [0, 0, ...]
+        '''
+
+        self.ShowH5File(self.trainDatasetPath)
+        self.ShowH5File(self.testDatasetPath)
+
+    def Main(self):
+        train_x_orig, train_y, test_x_orig, test_y, classes = self.load_data()
+
+        m_train = train_x_orig.shape[0] # 209
+        num_px = train_x_orig.shape[1]  # 64
+        m_test = test_x_orig.shape[0]   # 50
+
+        logging.info ("Number of training examples: " + str(m_train))
+        logging.info ("Number of testing examples: " + str(m_test))
+        logging.info ("Each image is of size: (" + str(num_px) + ", " + str(num_px) + ", 3)")
+        logging.info ("train_x_orig shape: " + str(train_x_orig.shape))
+        logging.info ("train_y shape: " + str(train_y.shape))
+        logging.info ("test_x_orig shape: " + str(test_x_orig.shape))
+        logging.info ("test_y shape: " + str(test_y.shape))
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
