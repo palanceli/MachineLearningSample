@@ -866,18 +866,16 @@ class Coding1_3(CodingWorks):
 
     def L_model_forward(self, X, parameters):
         """
-        实现前向算法，根据输入参数parameters即各层W、b计算各层Z、A。隐藏层使用RELU、输出层使用sigmoid。
+        实现前向算法，根据输入层X和各层W、b计算各层Z、A。隐藏层使用RELU、输出层使用sigmoid。
         Implement forward propagation for the [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID computation
         
         Arguments:
         X -- 输入层
-        parameters -- 隐藏层和输出层
+        parameters -- 各层W和b
         
         Returns:
-        AL -- last post-activation value
-        caches -- list of caches containing:
-                    every cache of linear_relu_forward() (there are L-1 of them, indexed from 0 to L-2)
-                    the cache of linear_sigmoid_forward() (there is one, indexed L-1)
+        AL -- 输出层A
+        caches -- 各层(Z, prev_A, W, b)
         """
 
         caches = []
