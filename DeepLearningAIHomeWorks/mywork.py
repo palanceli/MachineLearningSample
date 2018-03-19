@@ -1141,7 +1141,104 @@ class Coding1_3(CodingWorks):
         self.ShowH5File(self.trainDatasetPath)
         self.ShowH5File(self.testDatasetPath)
 
+    def L_layer_model(self, X, Y, layers_dims, learning_rate = 0.0075, num_iterations = 3000, print_cost=False):#lr was 0.009
+        """
+        Implements a L-layer neural network: [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID.
+        
+        Arguments:
+        X -- data, numpy array of shape (number of examples, num_px * num_px * 3)
+        Y -- true "label" vector (containing 0 if cat, 1 if non-cat), of shape (1, number of examples)
+        layers_dims -- list containing the input size and each layer size, of length (number of layers + 1).
+        learning_rate -- learning rate of the gradient descent update rule
+        num_iterations -- number of iterations of the optimization loop
+        print_cost -- if True, it prints the cost every 100 steps
+        
+        Returns:
+        parameters -- parameters learnt by the model. They can then be used to predict.
+        """
+
+        np.random.seed(1)
+        costs = []                         # keep track of cost
+        
+        # Parameters initialization.
+        ### START CODE HERE ###
+        parameters = self.initialize_parameters_deep(layers_dims)
+        ### END CODE HERE ###
+        
+        # Loop (gradient descent)
+        for i in range(0, num_iterations):
+
+            # Forward propagation: [LINEAR -> RELU]*(L-1) -> LINEAR -> SIGMOID.
+            ### START CODE HERE ### (≈ 1 line of code)
+            AL, caches = self.L_model_forward(X, parameters)
+            ### END CODE HERE ###
+            
+            # Compute cost.
+            ### START CODE HERE ### (≈ 1 line of code)
+            cost = self.compute_cost(AL, Y)
+            ### END CODE HERE ###
+        
+            # Backward propagation.
+            ### START CODE HERE ### (≈ 1 line of code)
+            grads = self.L_model_backward(AL, Y, caches)
+            ### END CODE HERE ###
+     
+            # Update parameters.
+            ### START CODE HERE ### (≈ 1 line of code)
+            parameters = self.update_parameters(parameters, grads, learning_rate)
+            ### END CODE HERE ###
+                    
+            # Print the cost every 100 training example
+            if print_cost and i % 100 == 0:
+                print ("Cost after iteration %i: %f" %(i, cost))
+            if print_cost and i % 100 == 0:
+                costs.append(cost)
+                
+        # plot the cost
+        plt.plot(np.squeeze(costs))
+        plt.ylabel('cost')
+        plt.xlabel('iterations (per tens)')
+        plt.title("Learning rate =" + str(learning_rate))
+        plt.show()
+        
+        return parameters
+
+    def predict(self, X, y, parameters):
+        """
+        This function is used to predict the results of a  L-layer neural network.
+        
+        Arguments:
+        X -- data set of examples you would like to label
+        parameters -- parameters of the trained model
+        
+        Returns:
+        p -- predictions for the given dataset X
+        """
+        
+        m = X.shape[1]
+        n = len(parameters) // 2 # number of layers in the neural network
+        p = np.zeros((1,m))
+        
+        # Forward propagation
+        probas, caches = self.L_model_forward(X, parameters)
+
+        
+        # convert probas to 0/1 predictions
+        for i in range(0, probas.shape[1]):
+            if probas[0,i] > 0.5:
+                p[0,i] = 1
+            else:
+                p[0,i] = 0
+        
+        #print results
+        #print ("predictions: " + str(p))
+        #print ("true labels: " + str(y))
+        logging.info("Accuracy: "  + str(np.sum((p == y)/m)))
+            
+        return p
+
     def Main(self):
+        # 2 - Dataset
         train_x_orig, train_y, test_x_orig, test_y, classes = self.load_data()
 
         m_train = train_x_orig.shape[0] # 209
@@ -1155,6 +1252,24 @@ class Coding1_3(CodingWorks):
         logging.info ("train_y shape: " + str(train_y.shape))
         logging.info ("test_x_orig shape: " + str(test_x_orig.shape))
         logging.info ("test_y shape: " + str(test_y.shape))
+
+        # 转成(x(1), x(2), ..., x(m))的形式，共64*64*3行，209列
+        train_x_flatten = train_x_orig.reshape(train_x_orig.shape[0], -1).T   # The "-1" makes reshape flatten the remaining dimensions
+        test_x_flatten = test_x_orig.reshape(test_x_orig.shape[0], -1).T
+
+        # Standardize data to have feature values between 0 and 1.
+        train_x = train_x_flatten/255.
+        test_x = test_x_flatten/255.
+
+        print ("train_x's shape: " + str(train_x.shape))
+        print ("test_x's shape: " + str(test_x.shape))
+
+        # 5 - L-layer Neural Network
+        layers_dims = [12288, 20, 7, 5, 1]
+        parameters = self.L_layer_model(train_x, train_y, layers_dims, num_iterations = 2500, print_cost = True)
+
+        pred_train = self.predict(train_x, train_y, parameters)
+        pred_test = self.predict(test_x, test_y, parameters)
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
