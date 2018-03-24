@@ -1393,11 +1393,14 @@ class Coding2_1_init(CodingWorks):
         L = len(layers_dims)            # number of layers in the network
         
         for l in range(1, L):
+            # parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l-1]) * 10;
             parameters['W' + str(l)] = np.zeros((layers_dims[l], layers_dims[l-1]))
             parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
+            # parameters['b' + str(l)] = np.random.randn(layers_dims[l], 1) * 10;
         return parameters
 
     def tc2(self):
+        # 打印全零的初始化数据
         parameters = self.initialize_parameters_zeros([3,2,1])
         print("W1 = " + str(parameters["W1"]))
         print("b1 = " + str(parameters["b1"]))
@@ -1745,6 +1748,7 @@ class Coding2_1_init(CodingWorks):
         return predictions
 
     def tc6(self):
+        plt.subplots(figsize=(5,4))
         train_X, train_Y, test_X, test_Y = self.load_dataset()
         parameters = self.model(train_X, train_Y, initialization = "random")
         print ("On the train set:")
@@ -1752,6 +1756,7 @@ class Coding2_1_init(CodingWorks):
         print ("On the test set:")
         predictions_test = self.predict(test_X, test_Y, parameters)
 
+        plt.subplots(figsize=(5,4))
         plt.title("Model with large random initialization")
         axes = plt.gca()
         axes.set_xlim([-1.5,1.5])
@@ -1759,6 +1764,7 @@ class Coding2_1_init(CodingWorks):
         self.plot_decision_boundary(lambda x: self.predict_dec(parameters, x.T), train_X, train_Y)
 
     def tc7(self):
+        plt.subplots(figsize=(5,4))
         train_X, train_Y, test_X, test_Y = self.load_dataset()
         parameters = self.model(train_X, train_Y, initialization = "he")
         print ("On the train set:")
@@ -1766,6 +1772,7 @@ class Coding2_1_init(CodingWorks):
         print ("On the test set:")
         predictions_test = self.predict(test_X, test_Y, parameters)
 
+        plt.subplots(figsize=(5,4))
         plt.title("Model with He initialization")
         axes = plt.gca()
         axes.set_xlim([-1.5,1.5])
