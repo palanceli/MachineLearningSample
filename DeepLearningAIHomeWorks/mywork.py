@@ -1795,6 +1795,7 @@ class Coding2_1_reg(CodingWorks):
 
     def tc1(self):
         ''' 数据可视化 '''
+        plt.subplots(figsize=(5,4))
         train_X, train_Y, test_X, test_Y = self.load_2D_dataset()
         plt.scatter(train_X[0, :], train_X[1, :], c=train_Y.flatten(), s=40, cmap=plt.cm.Spectral);
         plt.show()
@@ -2178,7 +2179,7 @@ class Coding2_1_reg(CodingWorks):
                 a3, cache = self.forward_propagation(X, parameters)
             elif keep_prob < 1:
                 a3, cache = self.forward_propagation_with_dropout(X, parameters, keep_prob)
-            
+
             # Cost function
             if lambd == 0:
                 cost = self.compute_cost(a3, Y)
@@ -2195,6 +2196,45 @@ class Coding2_1_reg(CodingWorks):
             elif keep_prob < 1:
                 grads = self.backward_propagation_with_dropout(X, Y, cache, keep_prob)
             
+            if i == 10:
+                (Z1, D1, A1, W1, b1, Z2, D2, A2, W2, b2, Z3, A3, W3, b3) = cache
+
+                logging.info('Z1.shape:(%d, %d)' % Z1.shape)
+                logging.info('D1.shape:(%d, %d)' % D1.shape)
+                logging.info('A1.shape:(%d, %d)' % A1.shape)
+                logging.info('W1.shape:(%d, %d)' % W1.shape)
+                logging.info('b1.shape:(%d, %d)' % b1.shape)
+                logging.info('')
+
+                logging.info('Z2.shape:(%d, %d)' % Z2.shape)
+                logging.info('D2.shape:(%d, %d)' % D2.shape)
+                logging.info('A2.shape:(%d, %d)' % A2.shape)
+                logging.info('W2.shape:(%d, %d)' % W2.shape)
+                logging.info('b2.shape:(%d, %d)' % b2.shape)
+                logging.info('')
+
+                logging.info('Z3.shape:(%d, %d)' % Z3.shape)
+                logging.info('A3.shape:(%d, %d)' % A3.shape)
+                logging.info('W3.shape:(%d, %d)' % W3.shape)
+                logging.info('b3.shape:(%d, %d)' % b3.shape)
+                logging.info('')
+
+                logging.info('dZ3.shape:(%d, %d)' % grads['dZ3'].shape)
+                logging.info('dW3.shape:(%d, %d)' % grads['dW3'].shape)
+                logging.info('db3.shape:(%d, %d)' % grads['db3'].shape)
+                logging.info('dA2.shape:(%d, %d)' % grads['dA2'].shape)
+                logging.info('')
+
+                logging.info('dZ2.shape:(%d, %d)' % grads['dZ2'].shape)
+                logging.info('dW2.shape:(%d, %d)' % grads['dW2'].shape)
+                logging.info('db2.shape:(%d, %d)' % grads['db2'].shape)
+                logging.info('dA1.shape:(%d, %d)' % grads['dA1'].shape)
+                logging.info('')
+
+                logging.info('dZ1.shape:(%d, %d)' % grads['dZ1'].shape)
+                logging.info('dW1.shape:(%d, %d)' % grads['dW1'].shape)
+                logging.info('db1.shape:(%d, %d)' % grads['db1'].shape)
+
             # Update parameters.
             parameters = self.update_parameters(parameters, grads, learning_rate)
             
@@ -2281,6 +2321,8 @@ class Coding2_1_reg(CodingWorks):
         return predictions
 
     def tc2(self):
+        ''' 不是用任何正则化 '''
+        plt.subplots(figsize=(5,4))
         train_X, train_Y, test_X, test_Y = self.load_2D_dataset()
         parameters = self.model(train_X, train_Y)
         logging.info ("On the training set:")
@@ -2288,6 +2330,7 @@ class Coding2_1_reg(CodingWorks):
         logging.info ("On the test set:")
         predictions_test = self.predict(test_X, test_Y, parameters)
 
+        plt.subplots(figsize=(5,4))
         plt.title("Model without regularization")
         axes = plt.gca()
         axes.set_xlim([-0.75,0.40])
@@ -2295,6 +2338,8 @@ class Coding2_1_reg(CodingWorks):
         self.plot_decision_boundary(lambda x: self.predict_dec(parameters, x.T), train_X, train_Y)
 
     def tc3(self):
+        ''' 使用L2正则化 '''
+        plt.subplots(figsize=(5,4))
         train_X, train_Y, test_X, test_Y = self.load_2D_dataset()
         parameters = self.model(train_X, train_Y, lambd = 0.7)
         print ("On the train set:")
@@ -2302,6 +2347,7 @@ class Coding2_1_reg(CodingWorks):
         print ("On the test set:")
         predictions_test = self.predict(test_X, test_Y, parameters)
 
+        plt.subplots(figsize=(5,4))
         plt.title("Model without regularization")
         axes = plt.gca()
         axes.set_xlim([-0.75,0.40])
@@ -2309,6 +2355,8 @@ class Coding2_1_reg(CodingWorks):
         self.plot_decision_boundary(lambda x: self.predict_dec(parameters, x.T), train_X, train_Y)
 
     def tc4(self):
+        ''' 使用Dropout正则化 '''
+        plt.subplots(figsize=(5,4))
         train_X, train_Y, test_X, test_Y = self.load_2D_dataset()
         parameters = self.model(train_X, train_Y, keep_prob = 0.86, learning_rate = 0.3)
 
@@ -2317,6 +2365,7 @@ class Coding2_1_reg(CodingWorks):
         print ("On the test set:")
         predictions_test = self.predict(test_X, test_Y, parameters)
 
+        plt.subplots(figsize=(5,4))
         plt.title("Model without regularization")
         axes = plt.gca()
         axes.set_xlim([-0.75,0.40])
