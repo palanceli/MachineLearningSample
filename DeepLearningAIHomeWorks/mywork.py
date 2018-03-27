@@ -2650,6 +2650,8 @@ class Coding2_1_gc(CodingWorks):
         # logging.info('db1:%s' % gradients['db1'])
         difference = self.gradient_check_n(parameters, gradients, X, Y)
 
+class Coding2_2(CodingWorks):
+    pass
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
