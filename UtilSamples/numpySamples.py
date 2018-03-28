@@ -13,7 +13,7 @@ import matplotlib.pyplot
 class samples(object):
 	def case01(self):
 		logging.debug('生成[1, 8]的等差数列：')
-		x = numpy.linspace(1, 8, 8)
+		x = numpy.linspace(1, 8, 8) # 从1到8 生成8个点的等差数据列
 		print(x)
 		print('\n')
 
