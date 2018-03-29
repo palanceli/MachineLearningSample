@@ -21,6 +21,8 @@ import sklearn
 import sklearn.datasets
 import sklearn.linear_model
 import scipy.io
+import tensorflow as tf
+from tensorflow.python.framework import ops
 
 class CodingWorks(unittest.TestCase):
     def setUp(self):
@@ -3390,6 +3392,7 @@ class Coding2_2(CodingWorks):
 
 class Coding2_3(CodingWorks):
     def tc1(self):
+        ''' 生成不同量级的α∈[0.0001, 1] '''
         n = 4
         np.random.seed()
         r = -1 * n * np.random.rand(n)
@@ -3398,6 +3401,7 @@ class Coding2_3(CodingWorks):
             logging.info('%.5f' % alpha[i])
 
     def tc2(self):
+        ''' 生成不同量级的β∈[0.9, 0.999] '''
         np.random.seed()
         r = 1 + 2 * np.random.rand(4)
         logging.info('1-β：')
@@ -3408,6 +3412,17 @@ class Coding2_3(CodingWorks):
         for i in range(4):
             logging.info('%.5f' % beta[i])
         
+    def tc3(self):
+        y_hat = tf.constant(36, name='y_hat')            # Define y_hat constant. Set to 36.
+        y = tf.constant(39, name='y')                    # Define y. Set to 39
+
+        loss = tf.Variable((y - y_hat)**2, name='loss')  # Create a variable for the loss
+
+        init = tf.global_variables_initializer()         # When init is run later (session.run(init)),
+                                                        # the loss variable will be initialized and ready to be computed
+        with tf.Session() as session:                    # Create a session and print the output
+            session.run(init)                            # Initializes the variables
+            print(session.run(loss))                     # Prints the loss
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
