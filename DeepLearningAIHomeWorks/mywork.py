@@ -3413,16 +3413,36 @@ class Coding2_3(CodingWorks):
             logging.info('%.5f' % beta[i])
         
     def tc3(self):
-        y_hat = tf.constant(36, name='y_hat')            # Define y_hat constant. Set to 36.
-        y = tf.constant(39, name='y')                    # Define y. Set to 39
+        y_hat = tf.constant(36, name='y_hat')      # 定义常量 ŷ=36
+        y = tf.constant(39, name='y')              # 定义常量 y=39
 
-        loss = tf.Variable((y - y_hat)**2, name='loss')  # Create a variable for the loss
+        loss = tf.Variable((y - y_hat)**2, name='loss')  # 定义变量，损失函数L=(y-ŷ)^2
 
-        init = tf.global_variables_initializer()         # When init is run later (session.run(init)),
-                                                        # the loss variable will be initialized and ready to be computed
-        with tf.Session() as session:                    # Create a session and print the output
-            session.run(init)                            # Initializes the variables
-            print(session.run(loss))                     # Prints the loss
+        init = tf.global_variables_initializer()   # 初始化Tensors，此时还没有开始执行任何运算
+        with tf.Session() as session:              # 创建Session
+            session.run(init)                      # 初始化变量
+            print(session.run(loss))               # 运行损失函数，并打印
+
+    def tc4(self):
+        a = tf.constant(2)
+        logging.info(a)
+
+    def tc5(self):
+        # w = tf.Variable(0., dtype=tf.float32)
+        # cost = tf.add(tf.add(w**2, tf.multiply(-10., w)), 25.)
+        # train = tf.train.GradientDescentOptimizer(0.01).minimize(cost)
+        x = tf.Variable(3, dtype=tf.float32)
+        f = tf.Variable(x**2, name='function')
+        init = tf.global_variables_initializer()
+        with tf.Session() as session:
+            session.run(init)
+            # print(session.run(train))
+
+    def tc6(self):
+        x = tf.placeholder(tf.int64, name='x')  # 定义占位符
+        init = tf.global_variables_initializer()
+        with tf.Session() as session:
+            logging.info(session.run(2*x, feed_dict={x:3})) # 用的时候再赋值
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
