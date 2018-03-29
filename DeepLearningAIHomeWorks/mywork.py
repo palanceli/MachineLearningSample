@@ -3444,6 +3444,123 @@ class Coding2_3(CodingWorks):
         with tf.Session() as session:
             logging.info(session.run(2*x, feed_dict={x:3})) # 用的时候再赋值
 
+    def linear_function(self):
+        ''' 实现线性函数：W·X+b '''
+        np.random.seed(1)
+        
+        X = tf.constant(np.random.randn(3,1), name = "X")
+        W = tf.constant(np.random.randn(4,3), name = "W")
+        b = tf.constant(np.random.randn(4,1), name = "b")
+        Y = tf.constant(np.random.randn(4,1), name = "Y")
+        
+        with tf.Session() as sess:
+            result = sess.run(tf.add(tf.matmul(W,X), b))
+        
+        return result
+
+    def tc7(self):
+        logging.info( "result = " + str(self.linear_function()))
+
+    def sigmoid_placeholder(self, z):
+        ''' 使用tf版的sigmoid函数 '''
+        x = tf.placeholder(tf.float32, name="x")
+        sigmoid = tf.sigmoid(x)
+
+        with tf.Session() as sess:
+            result = sess.run(sigmoid, feed_dict={x:z})
+                
+        return result
+
+    def sigmoid_variable(self, z):
+        x = tf.Variable(float(z), tf.float32)
+
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            result = sess.run(tf.sigmoid(x))
+        return result
+
+    def tc8(self):
+        logging.info ("sigmoid(0) = " + str(self.sigmoid(0)))
+        logging.info ("sigmoid(12) = " + str(self.sigmoid(12)))
+
+        logging.info('sigmoid(12) = ' + str(self.sigmoid_variable(0)))
+        logging.info('sigmoid(12) = ' + str(self.sigmoid_variable(12)))
+
+    def cost(self, logits, labels):
+        '''
+        计算以sigmoid未激活函数的成本函数值
+
+        Arguments:
+        logits -- 最后一层的z
+        labels -- 标签向量y (1 or 0) 
+        
+        Returns:
+        cost -- 计算成本函数值
+        '''
+        
+        z = tf.placeholder(tf.float32, name = "z")
+        y = tf.placeholder(tf.float32, name = "y")
+        
+        # 根据最后一层z和y，计算成本函数结果
+        cost = tf.nn.sigmoid_cross_entropy_with_logits(logits = z, labels = y)
+        
+        with tf.Session() as sess:
+            cost = sess.run(cost, feed_dict = {z:logits, y:labels})
+        
+        return cost
+
+    def tc9(self):
+        logits = self.sigmoid_placeholder(np.array([0.2,0.4,0.7,0.9]))
+        cost = self.cost(logits, np.array([0,0,1,1]))
+        logging.info ("cost = " + str(cost))
+
+    def one_hot_matrix(self, labels, C):
+        """
+        将标注向量labels中的每个数字x转成第x个元素为1其余为0的列向量的集合
+                        
+        Arguments:
+        labels -- 标注向量
+        C -- 分类的个数
+        
+        Returns: 
+        one_hot -- one hot matrix
+        """
+        C = tf.constant(value = C, name = "C")
+        
+        # 完成转换
+        one_hot_matrix = tf.one_hot(labels, C, axis = 0)
+        
+        with tf.Session() as sess:
+            one_hot = sess.run(one_hot_matrix,)
+        
+        return one_hot
+    
+    def tc10(self):
+        labels = np.array([1,2,3,0,2,1])
+        one_hot = self.one_hot_matrix(labels, C = 4)
+        print ("one_hot = " + str(one_hot))
+
+    def ones(self, shape):
+        """
+        构造形状为shape，内容全1的矩阵
+
+        Arguments:
+        shape -- 指定形状
+            
+        Returns: 
+        ones -- 返回构造的矩阵
+        """
+
+        ones = tf.ones(shape)
+        
+        with tf.Session() as sess:
+            ones = sess.run(ones)
+        
+        return ones
+
+    def tc11(self):
+        logging.info('ones = ' + str(self.ones([3, 2])))
+
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=logFmt, datefmt='%H:%M',)
