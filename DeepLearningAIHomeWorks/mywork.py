@@ -3781,37 +3781,28 @@ class Coding2_3(CodingWorks):
         parameters -- parameters learnt by the model. They can then be used to predict.
         """
         
-        ops.reset_default_graph()                         # to be able to rerun the model without overwriting tf variables
-        tf.set_random_seed(1)                             # to keep consistent results
-        seed = 3                                          # to keep consistent results
-        (n_x, m) = X_train.shape                          # (n_x: input size, m : number of examples in the train set)
-        n_y = Y_train.shape[0]                            # n_y : output size
-        costs = []                                        # To keep track of the cost
+        ops.reset_default_graph()        # to be able to rerun the model without overwriting tf variables
+        tf.set_random_seed(1)            # to keep consistent results
+        seed = 3                         # to keep consistent results
+        (n_x, m) = X_train.shape         # (n_x: 输入层节点数, m : 样本数)
+        n_y = Y_train.shape[0]           # n_y : 输出层节点数
+        costs = []                       # To keep track of the cost
         
         # Create Placeholders of shape (n_x, n_y)
-        ### START CODE HERE ### (1 line)
         X, Y = self.create_placeholders(n_x, n_y)
-        ### END CODE HERE ###
 
         # Initialize parameters
-        ### START CODE HERE ### (1 line)
+        # 初始化W1∈(25×12288)、 b1∈(25×1)、 W2∈(12×25)、b2∈(12×1)、W3∈(6×12)、b3∈(6×1)
         parameters = self.initialize_parameters()
-        ### END CODE HERE ###
         
         # Forward propagation: Build the forward propagation in the tensorflow graph
-        ### START CODE HERE ### (1 line)
         Z3 = self.forward_propagation(X, parameters)
-        ### END CODE HERE ###
         
         # Cost function: Add cost function to tensorflow graph
-        ### START CODE HERE ### (1 line)
         cost = self.compute_cost(Z3, Y)
-        ### END CODE HERE ###
         
         # Backpropagation: Define the tensorflow optimizer. Use an AdamOptimizer.
-        ### START CODE HERE ### (1 line)
         optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate).minimize(cost)
-        ### END CODE HERE ###
         
         # Initialize all the variables
         init = tf.global_variables_initializer()
@@ -3837,9 +3828,7 @@ class Coding2_3(CodingWorks):
                     
                     # IMPORTANT: The line that runs the graph on a minibatch.
                     # Run the session to execute the "optimizer" and the "cost", the feedict should contain a minibatch for (X,Y).
-                    ### START CODE HERE ### (1 line)
                     _ , minibatch_cost = sess.run([optimizer, cost], feed_dict={X: minibatch_X, Y: minibatch_Y})
-                    ### END CODE HERE ###
                     
                     epoch_cost += minibatch_cost / num_minibatches
 
@@ -3866,8 +3855,8 @@ class Coding2_3(CodingWorks):
             # Calculate accuracy on the test set
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 
-            logging.info ("Train Accuracy:", accuracy.eval({X: X_train, Y: Y_train}))
-            logging.info ("Test Accuracy:", accuracy.eval({X: X_test, Y: Y_test}))
+            logging.info ("Train Accuracy:" + str(accuracy.eval({X: X_train, Y: Y_train})))
+            logging.info ("Test Accuracy:" + str(accuracy.eval({X: X_test, Y: Y_test})))
             
             return parameters
 
