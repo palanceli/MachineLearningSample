@@ -31,7 +31,10 @@ class CodingWorks(unittest.TestCase):
         self.rootDir = os.path.join(os.path.expanduser('~'), 'Documents/DeepLearningAI作业/')
         np.random.seed(1)
         plt.switch_backend('Qt5Agg') # 在独立窗口中弹出绘图，而不是和命令行共用一个窗口
-        plt.subplots(figsize=(5,4))  # 调整窗口大小
+        # plt.subplots(figsize=(5,4))  # 调整窗口大小
+        plt.rcParams['figure.figsize'] = (5.0, 4.0)
+        plt.rcParams['image.interpolation'] = 'nearest'
+        plt.rcParams['image.cmap'] = 'gray'
 
     def showH5Group(self, groupObj):
         logging.info('group name:%s, shape:%s' % (groupObj.name, groupObj.shape))
@@ -1829,9 +1832,7 @@ class Coding2_1_reg(CodingWorks):
             parameters['W' + str(l)] = np.random.randn(layer_dims[l], layer_dims[l-1]) / np.sqrt(layer_dims[l-1])
             parameters['b' + str(l)] = np.zeros((layer_dims[l], 1))
             
-            assert(parameters['W' + str(l)].shape == layer_dims[l], layer_dims[l-1])
-            assert(parameters['W' + str(l)].shape == layer_dims[l], 1)
-
+            assert(parameters['W' + str(l)].shape == layer_dims[l])
             
         return parameters
 
@@ -3042,8 +3043,8 @@ class Coding2_2(CodingWorks):
             parameters['W' + str(l)] = np.random.randn(layer_dims[l], layer_dims[l-1])*  np.sqrt(2 / layer_dims[l-1])
             parameters['b' + str(l)] = np.zeros((layer_dims[l], 1))
             
-            assert(parameters['W' + str(l)].shape == layer_dims[l], layer_dims[l-1])
-            assert(parameters['W' + str(l)].shape == layer_dims[l], 1)
+            assert(parameters['W' + str(l)].shape == layer_dims[l])
+            assert(parameters['W' + str(l)].shape == layer_dims[l])
             
         return parameters
 
@@ -3885,6 +3886,42 @@ class Coding2_3(CodingWorks):
         print ("Y_test shape: " + str(Y_test.shape))
 
         parameters = self.model(X_train, Y_train, X_test, Y_test)
+
+class Coding4_1(CodingWorks):
+    def zero_pad(self, X, pad):
+        """
+        在X的外围执行层数为pad的padding操作
+        
+        Argument:
+        X -- 待padding的样本，shape为 (m, n_H, n_W, n_C)
+        pad -- padding的层数
+        
+        Returns:
+        X_pad -- 执行padding后的数据， shape为 (m, n_H + 2*pad, n_W + 2*pad, n_C)
+        """
+        # 第二个参数pad_width的含义：对于第一维即m个样本，前后均不填充
+        # 对第二维即每个样本的上下均填充pad个像素，对第三维即每个样本的前后均填充pad个像素
+        # 对第四维即每个样本的各通道，均不填充
+        X_pad = np.pad(X, ((0, 0), (pad, pad), (pad, pad), (0, 0)), 'constant')
+        
+        return X_pad
+
+    def tc1(self):
+        np.random.seed(1)
+        x = np.random.randn(4, 3, 3, 2)
+        x_pad = self.zero_pad(x, 2)
+        logging.info ("x.shape =%s", x.shape)
+        logging.info ("x_pad.shape =%s", x_pad.shape)
+        logging.info ("x[1,1] =%s", x[1,1])
+        logging.info ("x_pad[1,1] =%s", x_pad[1,1])
+
+        fig, axarr = plt.subplots(1, 2)
+        axarr[0].set_title('x')
+        axarr[0].imshow(x[0,:,:,0])
+        axarr[1].set_title('x_pad')
+        axarr[1].imshow(x_pad[0,:,:,0])
+        plt.show()
+
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
