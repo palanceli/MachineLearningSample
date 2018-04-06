@@ -3922,6 +3922,484 @@ class Coding4_1(CodingWorks):
         axarr[1].imshow(x_pad[0,:,:,0])
         plt.show()
 
+    def conv_single_step(self, a_slice_prev, W, b):
+        """
+        将前一层输出的矩阵，按照过滤器W生成切片a_slice_prev，执行卷积操作：a_slice_prev * W + b
+        注意回顾卷积的定义，运算得到一个实数，作为结果矩阵的一个元素
+        
+        Arguments:
+        a_slice_prev -- slice of input data of shape (f, f, n_C_prev)
+        W -- Weight parameters contained in a window - matrix of shape (f, f, n_C_prev)
+        b -- Bias parameters contained in a window - matrix of shape (1, 1, 1)
+        
+        Returns:
+        Z -- a scalar value, result of convolving the sliding window (W, b) on a slice x of the input data
+        """
+
+        s = a_slice_prev * W
+        Z = np.sum(s)
+        Z = float(Z + b)
+
+        return Z
+
+    def tc2(self):
+        np.random.seed(1)
+        a_slice_prev = np.random.randn(4, 4, 3)
+        W = np.random.randn(4, 4, 3)
+        b = np.random.randn(1, 1, 1)
+
+        Z = self.conv_single_step(a_slice_prev, W, b)
+        print("Z =", Z)
+
+    def conv_forward(self, A_prev, W, b, hparameters):
+        """
+        实现卷积神经网络的正向传播
+
+        Arguments:
+        A_prev -- output activations of the previous layer, numpy array of shape (m, n_H_prev, n_W_prev, n_C_prev)
+        W -- Weights, numpy array of shape (f, f, n_C_prev, n_C)
+        b -- Biases, numpy array of shape (1, 1, 1, n_C)
+        hparameters -- python dictionary containing "stride" and "pad"
+            
+        Returns:
+        Z -- conv output, numpy array of shape (m, n_H, n_W, n_C)
+        cache -- cache of values needed for the conv_backward() function
+        """
+        # 获取被操作矩阵参数
+        (m, n_H_prev, n_W_prev, n_C_prev) = A_prev.shape
+        # 获取过滤器参数
+        (f, f, n_C_prev, n_C) = W.shape
+        # 获取超参数        
+        stride = hparameters['stride']
+        pad = hparameters['pad']
+        
+        # 计算卷积运算后的参数
+        n_H = int((n_H_prev + 2 * pad - f) / stride + 1)
+        n_W = int((n_W_prev + 2 * pad - f) / stride + 1)
+        
+        # Initialize the output volume Z with zeros. (≈1 line)
+        Z = np.zeros((m, n_H, n_W, n_C))
+        
+        # 根据超参数执行padding操作
+        A_prev_pad = self.zero_pad(A_prev, pad)
+        
+        for i in range(m):                               # 遍历每一个样本
+            a_prev_pad = A_prev_pad[i, :, :, :]          # padding 后的第i个样本
+            for h in range(n_H):                           # loop over vertical axis of the output volume
+                for w in range(n_W):                       # loop over horizontal axis of the output volume
+                    for c in range(n_C):                   # loop over channels (= #filters) of the output volume
+                        # 计算切片位置
+                        vert_start = h * stride
+                        vert_end = vert_start + f
+                        horiz_start = w * stride
+                        horiz_end = horiz_start + f
+                        
+                        # 获取切片
+                        a_slice_prev = a_prev_pad[vert_start : vert_end, horiz_start : horiz_end, :]
+                        
+                        # 执行卷积的一步操作
+                        Z[i, h, w, c] = self.conv_single_step(a_slice_prev, W[:,:,:,c], b[:,:,:,c])
+        
+        # Making sure your output shape is correct
+        assert(Z.shape == (m, n_H, n_W, n_C))
+        
+        # Save information in "cache" for the backprop
+        cache = (A_prev, W, b, hparameters)
+        
+        return Z, cache
+
+    def tc3(self):
+        np.random.seed(1)
+        A_prev = np.random.randn(10,4,4,3)
+        W = np.random.randn(2,2,3,8)
+        b = np.random.randn(1,1,1,8)
+        hparameters = {"pad" : 2, "stride": 2}
+
+        Z, cache_conv = self.conv_forward(A_prev, W, b, hparameters)
+        logging.info("Z's mean =%s" % np.mean(Z))
+        logging.info("Z[3,2,1] =%s" % Z[3,2,1])
+        logging.info("cache_conv[0][1][2][3] =%s" % cache_conv[0][1][2][3])
+
+    def pool_forward(self, A_prev, hparameters, mode = "max"):
+        """
+        Implements the forward pass of the pooling layer
+        
+        Arguments:
+        A_prev -- Input data, numpy array of shape (m, n_H_prev, n_W_prev, n_C_prev)
+        hparameters -- python dictionary containing "f" and "stride"
+        mode -- the pooling mode you would like to use, defined as a string ("max" or "average")
+        
+        Returns:
+        A -- output of the pool layer, a numpy array of shape (m, n_H, n_W, n_C)
+        cache -- cache used in the backward pass of the pooling layer, contains the input and hparameters 
+        """
+        # 获取被操作矩阵的参数
+        (m, n_H_prev, n_W_prev, n_C_prev) = A_prev.shape
+        # 获取超参数
+        f = hparameters["f"]
+        stride = hparameters["stride"]
+        
+        # 计算结果矩阵的参数
+        n_H = int(1 + (n_H_prev - f) / stride)
+        n_W = int(1 + (n_W_prev - f) / stride)
+        n_C = n_C_prev
+        
+        # Initialize output matrix A
+        A = np.zeros((m, n_H, n_W, n_C))              
+        
+        for i in range(m):                         # 遍历样本
+            for h in range(n_H):                     # loop on the vertical axis of the output volume
+                for w in range(n_W):                 # loop on the horizontal axis of the output volume
+                    for c in range (n_C):            # loop over the channels of the output volume
+                        
+                        # 计算切片位置
+                        vert_start = h * stride
+                        vert_end = vert_start + f
+                        horiz_start = w * stride
+                        horiz_end = horiz_start + f
+                        
+                        # 获取切片
+                        a_prev_slice = A_prev[i, vert_start:vert_end, horiz_start:horiz_end, c]
+                        
+                        if mode == "max":
+                            A[i, h, w, c] = np.max(a_prev_slice)  # 最大池化
+                        elif mode == "average":
+                            A[i, h, w, c] = np.mean(a_prev_slice) # 平均池化
+        
+        # Store the input and hparameters in "cache" for pool_backward()
+        cache = (A_prev, hparameters)
+        
+        # Making sure your output shape is correct
+        assert(A.shape == (m, n_H, n_W, n_C))
+        
+        return A, cache
+        
+    def tc4(self):
+        np.random.seed(1)
+        A_prev = np.random.randn(2, 4, 4, 3)
+        hparameters = {"stride" : 2, "f": 3}
+
+        A, cache = self.pool_forward(A_prev, hparameters)
+        print("mode = max")
+        print("A =", A)
+        print()
+        A, cache = self.pool_forward(A_prev, hparameters, mode = "average")
+        print("mode = average")
+        print("A =", A)
+
+    def load_dataset(self):
+        trainDatasetPath = os.path.join(self.rootDir, 'coding4_1/datasets/train_signs.h5')
+        testDatasetPath = os.path.join(self.rootDir, 'coding4_1/datasets/test_signs.h5')
+
+        train_dataset = h5py.File(trainDatasetPath, "r")
+        train_set_x_orig = np.array(train_dataset["train_set_x"][:]) # your train set features
+        train_set_y_orig = np.array(train_dataset["train_set_y"][:]) # your train set labels
+
+        test_dataset = h5py.File(testDatasetPath, "r")
+        test_set_x_orig = np.array(test_dataset["test_set_x"][:]) # your test set features
+        test_set_y_orig = np.array(test_dataset["test_set_y"][:]) # your test set labels
+
+        classes = np.array(test_dataset["list_classes"][:]) # the list of classes
+        
+        train_set_y_orig = train_set_y_orig.reshape((1, train_set_y_orig.shape[0]))
+        test_set_y_orig = test_set_y_orig.reshape((1, test_set_y_orig.shape[0]))
+        
+        return train_set_x_orig, train_set_y_orig, test_set_x_orig, test_set_y_orig, classes
+
+    def tc5(self):
+        X_train_orig, Y_train_orig, X_test_orig, Y_test_orig, classes = self.load_dataset()
+        index = 15
+        plt.imshow(X_train_orig[index])
+        logging.info ("y = " + str(np.squeeze(Y_train_orig[:, index])))
+        plt.show()
+
+    def convert_to_one_hot(self, Y, C):
+        # numpy.eye生成由左上角到右下角的对角矩阵
+        Y = np.eye(C)[Y.reshape(-1)].T
+        return Y
+
+    def create_placeholders(self, n_H0, n_W0, n_C0, n_y):
+        """
+        Creates the placeholders for the tensorflow session.
+        
+        Arguments:
+        n_H0 -- scalar, height of an input image
+        n_W0 -- scalar, width of an input image
+        n_C0 -- scalar, number of channels of the input
+        n_y -- scalar, number of classes
+            
+        Returns:
+        X -- placeholder for the data input, of shape [None, n_H0, n_W0, n_C0] and dtype "float"
+        Y -- placeholder for the input labels, of shape [None, n_y] and dtype "float"
+        """
+
+        X = tf.placeholder('float', shape=[None, n_H0, n_W0, n_C0])
+        Y = tf.placeholder('float', shape=[None, n_y])
+        
+        return X, Y
+
+    def tc6(self):
+        X, Y = self.create_placeholders(64, 64, 3, 6)
+        logging.info ("X = " + str(X))
+        logging.info ("Y = " + str(Y))
+
+    def initialize_parameters(self):
+        """
+        Initializes weight parameters to build a neural network with tensorflow. The shapes are:
+                            W1 : [4, 4, 3, 8]   n_H1, n_W1, nC1, m1
+                            W2 : [2, 2, 8, 16]  n_H2, n_W2, nC2, m2
+        Returns:
+        parameters -- a dictionary of tensors containing W1, W2
+        """
+        
+        tf.set_random_seed(1)                              # so that your "random" numbers match ours
+            
+        W1 = tf.get_variable("W1", [4, 4, 3, 8], initializer = tf.contrib.layers.xavier_initializer(seed = 0))
+        W2 = tf.get_variable("W2", [2, 2, 8, 16], initializer = tf.contrib.layers.xavier_initializer(seed = 0))
+
+        parameters = {"W1": W1, "W2": W2}
+        
+        return parameters
+
+    def tc7(self):
+        ''' 验证初始化函数 '''
+        tf.reset_default_graph()
+        with tf.Session() as sess_test:
+            parameters = self.initialize_parameters()
+            init = tf.global_variables_initializer()
+            sess_test.run(init)
+            logging.info("W1 = " + str(parameters["W1"].eval()[1,1,1])) # eval()等价于run()
+            logging.info("W2 = " + str(parameters["W2"].eval()[1,1,1]))
+
+    def forward_propagation(self, X, parameters):
+        """
+        实现卷积神经网络的正向传播算法：
+        CONV2D -> RELU -> MAXPOOL -> CONV2D -> RELU -> MAXPOOL -> FLATTEN -> FULLYCONNECTED
+        
+        Arguments:
+        X -- input dataset placeholder, of shape (input size, number of examples)
+        parameters -- python dictionary containing your parameters "W1", "W2"
+                    the shapes are given in initialize_parameters
+
+        Returns:
+        Z3 -- the output of the last LINEAR unit
+        """
+        
+        # 获取第1层和第2层过滤器
+        W1 = parameters['W1']
+        W2 = parameters['W2']
+        
+        # 第一个卷积层。执行卷积操作，Z1 = X * W1
+        # 由于X →(m, n_H0, n_W0, n_C0)，strides在指定padding步长时需定义每个维度
+        Z1 = tf.nn.conv2d(X,W1, strides = [1,1,1,1], padding = 'SAME')
+        # A1 = RELU(Z1) # A1 → (m, n_H1, n_W1, n_C1)
+        A1 = tf.nn.relu(Z1)
+        # MAXPOOL: window 8x8, sride 8, padding 'SAME'
+        P1 = tf.nn.max_pool(A1, ksize = [1,8,8,1], strides = [1,8,8,1], padding = 'SAME')
+
+        # 第二个卷积层
+        Z2 = tf.nn.conv2d(P1,W2, strides = [1,1,1,1], padding = 'SAME')
+        # RELU
+        A2 = tf.nn.relu(Z2)
+        # MAXPOOL: window 4x4, stride 4, padding 'SAME'
+        P2 = tf.nn.max_pool(A2, ksize = [1,4,4,1], strides = [1,4,4,1], padding = 'SAME')
+
+        # FLATTEN
+        P2 = tf.contrib.layers.flatten(P2)
+        # 全连接层。注意：此处不要调用softmax，TensorFlow中softmax和成本函数被合成了一个函数，将在下一步调用
+        Z3 = tf.contrib.layers.fully_connected(P2, 6, activation_fn = None)
+
+        return Z3
+
+    def tc8(self):
+        ''' 验证正向传播函数 '''
+        tf.reset_default_graph()
+
+        with tf.Session() as sess:
+            np.random.seed(1)
+            X, Y = self.create_placeholders(64, 64, 3, 6)
+            parameters = self.initialize_parameters()
+            Z3 = self.forward_propagation(X, parameters)
+            init = tf.global_variables_initializer()
+            sess.run(init)
+            a = sess.run(Z3, {X: np.random.randn(2,64,64,3), Y: np.random.randn(2,6)})
+            logging.info("Z3 = " + str(a))
+
+    def compute_cost(self, Z3, Y):
+        """
+        Computes the cost
+        
+        Arguments:
+        Z3 -- output of forward propagation (output of the last LINEAR unit), of shape (6, number of examples)
+        Y -- "true" labels vector placeholder, same shape as Z3
+        
+        Returns:
+        cost - Tensor of the cost function
+        """
+        
+        cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits = Z3, labels = Y))
+        
+        return cost
+
+    def tc9(self):
+        ''' 验证成本函数 '''
+        tf.reset_default_graph()
+
+        with tf.Session() as sess:
+            np.random.seed(1)
+            X, Y = self.create_placeholders(64, 64, 3, 6)
+            parameters = self.initialize_parameters()
+            Z3 = self.forward_propagation(X, parameters)
+            cost = self.compute_cost(Z3, Y)
+            init = tf.global_variables_initializer()
+            sess.run(init)
+            a = sess.run(cost, {X: np.random.randn(4,64,64,3), Y: np.random.randn(4,6)})
+            logging.info("cost = " + str(a))
+
+    def random_mini_batches(self, X, Y, mini_batch_size = 64, seed = 0):
+        """
+        Creates a list of random minibatches from (X, Y)
+        
+        Arguments:
+        X -- input data, of shape (input size, number of examples) (m, Hi, Wi, Ci)
+        Y -- true "label" vector (containing 0 if cat, 1 if non-cat), of shape (1, number of examples) (m, n_y)
+        mini_batch_size - size of the mini-batches, integer
+        seed -- this is only for the purpose of grading, so that you're "random minibatches are the same as ours.
+        
+        Returns:
+        mini_batches -- list of synchronous (mini_batch_X, mini_batch_Y)
+        """
+        
+        m = X.shape[0]                  # number of training examples
+        mini_batches = []
+        np.random.seed(seed)
+        
+        # Step 1: Shuffle (X, Y)
+        permutation = list(np.random.permutation(m))
+        shuffled_X = X[permutation,:,:,:]
+        shuffled_Y = Y[permutation,:]
+
+        # Step 2: Partition (shuffled_X, shuffled_Y). Minus the end case.
+        num_complete_minibatches = math.floor(m/mini_batch_size) # number of mini batches of size mini_batch_size in your partitionning
+        for k in range(0, num_complete_minibatches):
+            mini_batch_X = shuffled_X[k * mini_batch_size : k * mini_batch_size + mini_batch_size,:,:,:]
+            mini_batch_Y = shuffled_Y[k * mini_batch_size : k * mini_batch_size + mini_batch_size,:]
+            mini_batch = (mini_batch_X, mini_batch_Y)
+            mini_batches.append(mini_batch)
+        
+        # Handling the end case (last mini-batch < mini_batch_size)
+        if m % mini_batch_size != 0:
+            mini_batch_X = shuffled_X[num_complete_minibatches * mini_batch_size : m,:,:,:]
+            mini_batch_Y = shuffled_Y[num_complete_minibatches * mini_batch_size : m,:]
+            mini_batch = (mini_batch_X, mini_batch_Y)
+            mini_batches.append(mini_batch)
+        
+        return mini_batches
+
+
+    def model(self, X_train, Y_train, X_test, Y_test, learning_rate = 0.009,
+            num_epochs = 100, minibatch_size = 64, print_cost = True):
+        """
+        Implements a three-layer ConvNet in Tensorflow:
+        CONV2D -> RELU -> MAXPOOL -> CONV2D -> RELU -> MAXPOOL -> FLATTEN -> FULLYCONNECTED
+        
+        Arguments:
+        X_train -- training set, of shape (None, 64, 64, 3)
+        Y_train -- test set, of shape (None, n_y = 6)
+        X_test -- training set, of shape (None, 64, 64, 3)
+        Y_test -- test set, of shape (None, n_y = 6)
+        learning_rate -- learning rate of the optimization
+        num_epochs -- number of epochs of the optimization loop
+        minibatch_size -- size of a minibatch
+        print_cost -- True to print the cost every 100 epochs
+        
+        Returns:
+        train_accuracy -- real number, accuracy on the train set (X_train)
+        test_accuracy -- real number, testing accuracy on the test set (X_test)
+        parameters -- parameters learnt by the model. They can then be used to predict.
+        """
+        
+        ops.reset_default_graph()               # to be able to rerun the model without overwriting tf variables
+        tf.set_random_seed(1)                   # to keep results consistent (tensorflow seed)
+        seed = 3                                # to keep results consistent (numpy seed)
+        (m, n_H0, n_W0, n_C0) = X_train.shape             
+        n_y = Y_train.shape[1]                            
+        costs = []                              # To keep track of the cost
+        # 定义卷积神经网络框架
+        X, Y = self.create_placeholders(n_H0, n_W0, n_C0, n_y)
+
+        parameters = self.initialize_parameters()    # 构造W1和W2的初始值
+        
+        Z3 = self.forward_propagation(X, parameters) # 执行正向传播
+        
+        cost = self.compute_cost(Z3, Y)              # 计算成本函数
+        
+        optimizer = tf.train.AdamOptimizer(learning_rate).minimize(cost) # 执行反向传播，完成梯度下降
+        
+        # 执行神经网络框架
+        init = tf.global_variables_initializer()
+        
+        with tf.Session() as sess:
+            sess.run(init)
+            
+            for epoch in range(num_epochs):  # 执行指定的轮数
+
+                minibatch_cost = 0.
+                num_minibatches = int(m / minibatch_size) # number of minibatches of size minibatch_size in the train set
+                seed = seed + 1
+                minibatches = self.random_mini_batches(X_train, Y_train, minibatch_size, seed)
+
+                for minibatch in minibatches:
+
+                    # Select a minibatch
+                    (minibatch_X, minibatch_Y) = minibatch
+                    # 执行成本函数和反向传播
+                    _ , temp_cost = sess.run([optimizer, cost] , feed_dict={X: minibatch_X, Y: minibatch_Y})
+                    
+                    minibatch_cost += temp_cost / num_minibatches
+                    
+                if print_cost == True and epoch % 5 == 0:
+                    logging.info ("Cost after epoch %i: %f" % (epoch, minibatch_cost))
+                if print_cost == True and epoch % 1 == 0:
+                    costs.append(minibatch_cost)
+            
+            plt.plot(np.squeeze(costs))
+            plt.ylabel('cost')
+            plt.xlabel('iterations (per tens)')
+            plt.title("Learning rate =" + str(learning_rate))
+            plt.show()
+
+            # Calculate the correct predictions
+            predict_op = tf.argmax(Z3, 1)
+            correct_prediction = tf.equal(predict_op, tf.argmax(Y, 1))
+            
+            # Calculate accuracy on the test set
+            accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+            logging.info(accuracy)
+            train_accuracy = accuracy.eval({X: X_train, Y: Y_train})
+            test_accuracy = accuracy.eval({X: X_test, Y: Y_test})
+            logging.info("Train Accuracy:%s" % train_accuracy)
+            logging.info("Test Accuracy:%s" % test_accuracy)
+                    
+            return train_accuracy, test_accuracy, parameters
+            
+    def tcMain(self):
+        X_train_orig, Y_train_orig, X_test_orig, Y_test_orig, classes = self.load_dataset()
+        # 将训练和测试集归一化
+        X_train = X_train_orig/255. 
+        X_test = X_test_orig/255.
+        # 将训练和测试标注由数字转成向量
+        Y_train = self.convert_to_one_hot(Y_train_orig, 6).T
+        Y_test = self.convert_to_one_hot(Y_test_orig, 6).T
+        logging.info ("number of training examples = " + str(X_train.shape[0]))
+        logging.info ("number of test examples = " + str(X_test.shape[0]))
+        logging.info ("X_train shape: " + str(X_train.shape))
+        logging.info ("Y_train shape: " + str(Y_train.shape))
+        logging.info ("X_test shape: " + str(X_test.shape))
+        logging.info ("Y_test shape: " + str(Y_test.shape))
+        conv_layers = {}
+        _, _, parameters = self.model(X_train, Y_train, X_test, Y_test)
+
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
