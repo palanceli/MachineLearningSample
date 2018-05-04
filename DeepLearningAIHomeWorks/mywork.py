@@ -24,6 +24,22 @@ import scipy.io
 import tensorflow as tf
 from tensorflow.python.framework import ops
 
+from keras import layers
+from keras.layers import Input, Dense, Activation, ZeroPadding2D, BatchNormalization, Flatten, Conv2D
+from keras.layers import AveragePooling2D, MaxPooling2D, Dropout, GlobalMaxPooling2D, GlobalAveragePooling2D
+from keras.models import Model
+from keras.preprocessing import image
+from keras.utils import layer_utils
+from keras.utils.data_utils import get_file
+from keras.applications.imagenet_utils import preprocess_input
+import pydot
+from IPython.display import SVG
+from keras.utils.vis_utils import model_to_dot
+from keras.utils import plot_model
+
+import keras.backend as K
+from matplotlib.pyplot import imshow
+
 class CodingWorks(unittest.TestCase):
     def setUp(self):
         logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
@@ -35,6 +51,8 @@ class CodingWorks(unittest.TestCase):
         plt.rcParams['figure.figsize'] = (5.0, 4.0)
         plt.rcParams['image.interpolation'] = 'nearest'
         plt.rcParams['image.cmap'] = 'gray'
+
+        K.set_image_data_format('channels_last')
 
     def showH5Group(self, groupObj):
         logging.info('group name:%s, shape:%s' % (groupObj.name, groupObj.shape))
@@ -4400,6 +4418,10 @@ class Coding4_1(CodingWorks):
         conv_layers = {}
         _, _, parameters = self.model(X_train, Y_train, X_test, Y_test)
 
+class Coding4_2_KerasTutorial(CodingWorks):
+    ''' Keras Tutorial Happy House'''
+    def tcMain(self):
+        pass
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
