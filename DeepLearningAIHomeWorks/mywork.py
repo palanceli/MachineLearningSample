@@ -4526,7 +4526,34 @@ class Coding4_2_KerasTutorial(CodingWorks):
         return model
 
     def tcMain(self):
-        pass
+        X_train_orig, Y_train_orig, X_test_orig, Y_test_orig, classes = self.load_dataset()
+
+        # Normalize image vectors
+        X_train = X_train_orig/255.
+        X_test = X_test_orig/255.
+
+        # Reshape
+        Y_train = Y_train_orig.T
+        Y_test = Y_test_orig.T
+
+        # 创建模型
+        happyModel = self.HappyModel(X_train.shape[1:])
+        # 编译模型
+        happyModel.compile(optimizer = "Adam", loss = "binary_crossentropy", metrics = ["accuracy"])
+        # 训练模型
+        happyModel.fit(x=X_train, y = Y_train, epochs = 3, batch_size = 16)
+        # 测试/评估
+        preds = happyModel.evaluate(x = X_test, y = Y_test)
+        
+        logging.info ("Loss = " + str(preds[0]))
+        logging.info ("Test Accuracy = " + str(preds[1]))
+
+        # 将happyModel转成图片，需要安装Graphviz:
+        # brew install graphviz
+        # pip install graphviz
+        plot_model(happyModel, to_file='HappyModel.png')
+        SVG(model_to_dot(happyModel).create(prog='dot', format='svg'))
+
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
