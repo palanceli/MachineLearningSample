@@ -4488,7 +4488,7 @@ class Coding4_2_KerasTutorial(CodingWorks):
         Implementation of the HappyModel.
         
         Arguments:
-        input_shape -- shape of the images of the dataset
+        input_shape -- shape of the images of the dataset，此处为(64, 64, 3)
 
         Returns:
         model -- a Model() instance in Keras
@@ -4499,16 +4499,20 @@ class Coding4_2_KerasTutorial(CodingWorks):
         
         # Define the input placeholder as a tensor with shape input_shape. Think of this as your input image!
         X_input = Input(input_shape)
-
+        
         # Zero-Padding: pads the border of X_input with zeroes
+        # 参数第1个3表示在矩阵前后行均加3行0，第2个3表示在前后列均加3列0
         X = ZeroPadding2D((3, 3))(X_input)
-
+        
         # CONV -> BN -> RELU Block applied to X
+        # 32个7×7的卷积核，步长为1×1，我没找到name参数的含义
         X = Conv2D(32, (7, 7), strides = (1, 1), name = 'conv0')(X)
+        # 正则化，参见《笔记六》3.4正则化网络的激活函数
         X = BatchNormalization(axis = 3, name = 'bn0')(X)
-        X = Activation('relu')(X)
+        # 定义激活函数为RELU
+        X = Activation('relu')(X) 
 
-        # MAXPOOL
+        # MAXPOOL，Pooling的尺寸为2，步长为2
         X = MaxPooling2D((2, 2), name='max_pool')(X)
 
         # FLATTEN X (means convert it to a vector) + FULLYCONNECTED
@@ -4550,7 +4554,6 @@ class Coding4_2_KerasTutorial(CodingWorks):
 
         # 将happyModel转成图片，需要安装Graphviz:
         # brew install graphviz
-        # pip install graphviz
         plot_model(happyModel, to_file='HappyModel.png')
         SVG(model_to_dot(happyModel).create(prog='dot', format='svg'))
 
