@@ -12,20 +12,24 @@ import sys
 import os
 
 import numpy as np
+import pandas as pd
+import PIL
 import h5py
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import imshow
 import scipy
+import scipy.io
+import scipy.misc
 from PIL import Image
 from scipy import ndimage
 import sklearn
 import sklearn.datasets
 import sklearn.linear_model
-import scipy.io
 import tensorflow as tf
 from tensorflow.python.framework import ops
 
 from keras import layers
-from keras.layers import Input, Add, Dense, Activation, ZeroPadding2D, BatchNormalization, Flatten, Conv2D
+from keras.layers import Input, Lambda, Add, Dense, Activation, ZeroPadding2D, BatchNormalization, Flatten, Conv2D
 from keras.layers import AveragePooling2D, MaxPooling2D, Dropout, GlobalMaxPooling2D, GlobalAveragePooling2D
 from keras.models import Model, load_model
 from keras.preprocessing import image
@@ -37,7 +41,6 @@ from IPython.display import SVG
 from keras.utils.vis_utils import model_to_dot
 from keras.utils import plot_model
 from keras.initializers import glorot_uniform
-import scipy.misc
 
 import keras.backend as K
 from matplotlib.pyplot import imshow
