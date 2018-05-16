@@ -4832,6 +4832,56 @@ class Coding4_2_ResidualNetworks(CodingWorks):
         logging.info ("Loss = " + str(preds[0]))
         logging.info ("Test Accuracy = " + str(preds[1]))
 
+class Coding4_3(CodingWorks):
+    def yolo_filter_boxes(self, box_confidence, boxes, box_class_probs, threshold = .6):
+        """Filters YOLO boxes by thresholding on object and class confidence.
+        
+        Arguments:
+        box_confidence -- tensor of shape (19, 19, 5, 1) 19×19×5个有物体的概率
+        boxes -- tensor of shape (19, 19, 5, 4) 19×19×5个(bx, by, bh, bw)
+        box_class_probs -- tensor of shape (19, 19, 5, 80) 19×19×5个80维的类别
+        threshold -- real value, if [ highest class probability score < threshold], then get rid of the corresponding box
+        
+        Returns:
+        scores -- tensor of shape (None,), containing the class probability score for selected boxes
+        boxes -- tensor of shape (None, 4), containing (b_x, b_y, b_h, b_w) coordinates of selected boxes
+        classes -- tensor of shape (None,), containing the index of the class detected by the selected boxes
+        
+        Note: "None" is here because you don't know the exact number of selected boxes, as it depends on the threshold. 
+        For example, the actual output size of scores would be (10,) if there are 10 boxes.
+        """
+        
+        # Step 1: Compute box scores
+        box_scores = box_confidence * box_class_probs
+        
+        # Step 2: Find the box_classes thanks to the max box_scores, keep track of the corresponding score
+        box_classes = K.argmax(box_scores, axis=-1) # 求最大值的下标
+        box_class_scores = K.max(box_scores, axis=-1, keepdims=False) # 求最大值
+        
+        # Step 3: Create a filtering mask based on "box_class_scores" by using "threshold". The mask should have the
+        # same dimension as box_class_scores, and be True for the boxes you want to keep (with probability >= threshold)
+        filtering_mask = box_class_scores >= threshold              #过滤出最大值大于threshold的格子
+        
+        # Step 4: Apply the mask to scores, boxes and classes
+        scores = tf.boolean_mask(box_class_scores, filtering_mask)  # 得到有效格子的得分
+        boxes = tf.boolean_mask(boxes, filtering_mask)              # 得到有效个字的(bx, by, bh, bw)
+        classes = tf.boolean_mask(box_classes, filtering_mask)      # 得到有效格子的类别
+        
+        return scores, boxes, classes
+
+    def tc1(self):
+        with tf.Session() as test_a:
+            box_confidence = tf.random_normal([19, 19, 5, 1], mean=1, stddev=4, seed = 1)
+            boxes = tf.random_normal([19, 19, 5, 4], mean=1, stddev=4, seed = 1)
+            box_class_probs = tf.random_normal([19, 19, 5, 80], mean=1, stddev=4, seed = 1)
+            scores, boxes, classes = self.yolo_filter_boxes(box_confidence, boxes, box_class_probs, threshold = 0.5)
+            logging.info("scores[2] = " + str(scores[2].eval()))
+            logging.info("boxes[2] = " + str(boxes[2].eval()))
+            logging.info("classes[2] = " + str(classes[2].eval()))
+            logging.info("scores.shape = " + str(scores.shape))
+            logging.info("boxes.shape = " + str(boxes.shape))
+            logging.info("classes.shape = " + str(classes.shape))
+
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=logFmt, datefmt='%H:%M',)
