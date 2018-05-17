@@ -4882,6 +4882,187 @@ class Coding4_3(CodingWorks):
             logging.info("boxes.shape = " + str(boxes.shape))
             logging.info("classes.shape = " + str(classes.shape))
 
+    def iou(self, box1, box2):
+        """Implement the intersection over union (IoU) between box1 and box2
+        
+        Arguments:
+        box1 -- first box, list object with coordinates (x1, y1, x2, y2)
+        box2 -- second box, list object with coordinates (x1, y1, x2, y2)
+        """
+
+        # Calculate the (y1, x1, y2, x2) coordinates of the intersection of box1 and box2. Calculate its Area.
+        ### START CODE HERE ### (≈ 5 lines)
+        xi1 = max(box1[0], box2[0])
+        yi1 = max(box1[1], box2[1])
+        xi2 = min(box1[2], box2[2])
+        yi2 = min(box1[3], box2[3])
+        inter_area = (yi2 - yi1) * (xi2 - xi1)
+        ### END CODE HERE ###    
+
+        # Calculate the Union area by using Formula: Union(A,B) = A + B - Inter(A,B)
+        ### START CODE HERE ### (≈ 3 lines)
+        box1_area = (box1[3] - box1[1]) * (box1[2] - box1[0])
+        box2_area = (box2[3] - box2[1]) * (box2[2] - box2[0])
+        union_area = box1_area + box2_area - inter_area
+        ### END CODE HERE ###
+        
+        # compute the IoU
+        ### START CODE HERE ### (≈ 1 line)
+        iou = inter_area / union_area
+        ### END CODE HERE ###
+
+        return iou
+
+    def tc2(self):
+        box1 = (2, 1, 4, 3)
+        box2 = (1, 2, 3, 4) 
+        print("iou = " + str(self.iou(box1, box2)))
+
+    def yolo_non_max_suppression(self, scores, boxes, classes, max_boxes = 10, iou_threshold = 0.5):
+        """
+        Applies Non-max suppression (NMS) to set of boxes
+        
+        Arguments:
+        scores -- tensor of shape (None,), output of yolo_filter_boxes()
+        boxes -- tensor of shape (None, 4), output of yolo_filter_boxes() that have been scaled to the image size (see later)
+        classes -- tensor of shape (None,), output of yolo_filter_boxes()
+        max_boxes -- integer, maximum number of predicted boxes you'd like
+        iou_threshold -- real value, "intersection over union" threshold used for NMS filtering
+        
+        Returns:
+        scores -- tensor of shape (, None), predicted score for each box
+        boxes -- tensor of shape (4, None), predicted box coordinates
+        classes -- tensor of shape (, None), predicted class for each box
+        
+        Note: The "None" dimension of the output tensors has obviously to be less than max_boxes. Note also that this
+        function will transpose the shapes of scores, boxes, classes. This is made for convenience.
+        """
+        logging.info(scores.shape)
+        logging.info(boxes.shape)
+        logging.info(classes.shape)
+
+        max_boxes_tensor = K.variable(max_boxes, dtype='int32')     # tensor to be used in tf.image.non_max_suppression()
+        K.get_session().run(tf.variables_initializer([max_boxes_tensor])) # initialize variable max_boxes_tensor
+        
+        # Use tf.image.non_max_suppression() to get the list of indices corresponding to boxes you keep
+        ### START CODE HERE ### (≈ 1 line)
+        nms_indices = tf.image.non_max_suppression(boxes, scores, max_boxes, iou_threshold)
+        ### END CODE HERE ###
+        
+        # Use K.gather() to select only nms_indices from scores, boxes and classes
+        ### START CODE HERE ### (≈ 3 lines)
+        scores = K.gather(scores, nms_indices)
+        boxes = K.gather(boxes, nms_indices)
+        classes = K.gather(classes, nms_indices)
+        ### END CODE HERE ###
+        
+        return scores, boxes, classes
+
+    def tc3(self):
+        with tf.Session() as test_b:
+            scores = tf.random_normal([54,], mean=1, stddev=4, seed = 1)
+            boxes = tf.random_normal([54, 4], mean=1, stddev=4, seed = 1)
+            classes = tf.random_normal([54,], mean=1, stddev=4, seed = 1)
+            scores, boxes, classes = self.yolo_non_max_suppression(scores, boxes, classes)
+            logging.info("scores[2] = " + str(scores[2].eval()))
+            logging.info("boxes[2] = " + str(boxes[2].eval()))
+            logging.info("classes[2] = " + str(classes[2].eval()))
+            logging.info("scores.shape = " + str(scores.eval().shape))
+            logging.info("boxes.shape = " + str(boxes.eval().shape))
+            logging.info("classes.shape = " + str(classes.eval().shape))
+
+
+    def yolo_boxes_to_corners(self, box_xy, box_wh):
+        """
+        Convert YOLO box predictions to bounding box corners.
+        (x, y, w, h) => (x1, y1, x2, y2)
+        """
+        box_mins = box_xy - (box_wh / 2.)
+        box_maxes = box_xy + (box_wh / 2.)
+
+        # y_min, x_min, y_max, x_max
+        return K.concatenate([box_mins[..., 1:2], box_mins[..., 0:1], 
+                            box_maxes[..., 1:2], box_maxes[..., 0:1]])
+              
+    def yolo_filter_boxes(self, box_confidence, boxes, box_class_probs, threshold=.6):
+        """Filter YOLO boxes based on object and class confidence."""
+        box_scores = box_confidence * box_class_probs
+        box_classes = K.argmax(box_scores, axis=-1)
+        box_class_scores = K.max(box_scores, axis=-1)
+        prediction_mask = box_class_scores >= threshold
+
+        # TODO: Expose tf.boolean_mask to Keras backend?
+        boxes = tf.boolean_mask(boxes, prediction_mask)
+        scores = tf.boolean_mask(box_class_scores, prediction_mask)
+        classes = tf.boolean_mask(box_classes, prediction_mask)
+
+        return boxes, scores, classes
+
+    def scale_boxes(self, boxes, image_shape):
+        """ Scales the predicted boxes in order to be drawable on the image"""
+        height = image_shape[0]
+        width = image_shape[1]
+        image_dims = K.stack([height, width, height, width])
+        image_dims = K.reshape(image_dims, [1, 4])
+        boxes = boxes * image_dims
+        return boxes
+
+    def yolo_eval(self, yolo_outputs, image_shape = (720., 1280.), max_boxes=10, score_threshold=.6, iou_threshold=.5):
+        """
+        Converts the output of YOLO encoding (a lot of boxes) to your predicted boxes along with their scores, box coordinates and classes.
+        
+        Arguments:
+        yolo_outputs -- output of the encoding model (for image_shape of (608, 608, 3)), contains 4 tensors:
+                        box_confidence: tensor of shape (None, 19, 19, 5, 1)
+                        box_xy: tensor of shape (None, 19, 19, 5, 2)
+                        box_wh: tensor of shape (None, 19, 19, 5, 2)
+                        box_class_probs: tensor of shape (None, 19, 19, 5, 80)
+        image_shape -- tensor of shape (2,) containing the input shape, in this notebook we use (608., 608.) (has to be float32 dtype)
+        max_boxes -- integer, maximum number of predicted boxes you'd like
+        score_threshold -- real value, if [ highest class probability score < threshold], then get rid of the corresponding box
+        iou_threshold -- real value, "intersection over union" threshold used for NMS filtering
+        
+        Returns:
+        scores -- tensor of shape (None, ), predicted score for each box
+        boxes -- tensor of shape (None, 4), predicted box coordinates
+        classes -- tensor of shape (None,), predicted class for each box
+        """
+        
+        ### START CODE HERE ### 
+        
+        # Retrieve outputs of the YOLO model (≈1 line)
+        box_confidence, box_xy, box_wh, box_class_probs = yolo_outputs
+
+        # Convert boxes to be ready for filtering functions 
+        boxes = self.yolo_boxes_to_corners(box_xy, box_wh)
+
+        # Use one of the functions you've implemented to perform Score-filtering with a threshold of score_threshold (≈1 line)
+        scores, boxes, classes = self.yolo_filter_boxes(box_confidence, boxes, box_class_probs, score_threshold)
+        
+        # Scale boxes back to original image shape.
+        boxes = self.scale_boxes(boxes, image_shape)
+
+        # Use one of the functions you've implemented to perform Non-max suppression with a threshold of iou_threshold (≈1 line)
+        scores, boxes, classes = self.yolo_non_max_suppression(scores, boxes, classes, max_boxes, iou_threshold)
+        
+        ### END CODE HERE ###
+        
+        return scores, boxes, classes
+
+    def tc4(self):
+        with tf.Session() as test_b:
+            yolo_outputs = (tf.random_normal([19, 19, 5, 1], mean=1, stddev=4, seed = 1),
+                            tf.random_normal([19, 19, 5, 2], mean=1, stddev=4, seed = 1),
+                            tf.random_normal([19, 19, 5, 2], mean=1, stddev=4, seed = 1),
+                            tf.random_normal([19, 19, 5, 80], mean=1, stddev=4, seed = 1))
+            scores, boxes, classes = self.yolo_eval(yolo_outputs)
+            logging.info("scores[2] = " + str(scores[2].eval()))
+            logging.info("boxes[2] = " + str(boxes[2].eval()))
+            logging.info("classes[2] = " + str(classes[2].eval()))
+            logging.info("scores.shape = " + str(scores.eval().shape))
+            logging.info("boxes.shape = " + str(boxes.eval().shape))
+            logging.info("classes.shape = " + str(classes.eval().shape))
+        
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=logFmt, datefmt='%H:%M',)
