@@ -44,6 +44,7 @@ from keras.initializers import glorot_uniform
 
 import keras.backend as K
 from matplotlib.pyplot import imshow
+import imghdr
 
 class CodingWorks(unittest.TestCase):
     def setUp(self):
@@ -4537,6 +4538,7 @@ class Coding4_2_KerasTutorial(CodingWorks):
 
     def tcMain(self):
         X_train_orig, Y_train_orig, X_test_orig, Y_test_orig, classes = self.load_dataset()
+        logging.info(X_train_orig)
 
         # Normalize image vectors
         X_train = X_train_orig/255.
@@ -4760,7 +4762,6 @@ class Coding4_2_ResidualNetworks(CodingWorks):
 
         return model
 
-
     def load_dataset(self):
         trainDatasetPath = os.path.join(self.rootDir, 'coding4_2/ResNets/datasets/train_signs.h5')
         testDatasetPath = os.path.join(self.rootDir, 'coding4_2/ResNets/datasets/test_signs.h5')
@@ -4853,6 +4854,7 @@ class Coding4_3(CodingWorks):
         
         # Step 1: Compute box scores
         box_scores = box_confidence * box_class_probs
+        logging.info(box_scores)
         
         # Step 2: Find the box_classes thanks to the max box_scores, keep track of the corresponding score
         box_classes = K.argmax(box_scores, axis=-1) # 求最大值的下标
@@ -4971,7 +4973,6 @@ class Coding4_3(CodingWorks):
             logging.info("boxes.shape = " + str(boxes.eval().shape))
             logging.info("classes.shape = " + str(classes.eval().shape))
 
-
     def yolo_boxes_to_corners(self, box_xy, box_wh):
         """
         Convert YOLO box predictions to bounding box corners.
@@ -4984,19 +4985,19 @@ class Coding4_3(CodingWorks):
         return K.concatenate([box_mins[..., 1:2], box_mins[..., 0:1], 
                             box_maxes[..., 1:2], box_maxes[..., 0:1]])
               
-    def yolo_filter_boxes(self, box_confidence, boxes, box_class_probs, threshold=.6):
-        """Filter YOLO boxes based on object and class confidence."""
-        box_scores = box_confidence * box_class_probs
-        box_classes = K.argmax(box_scores, axis=-1)
-        box_class_scores = K.max(box_scores, axis=-1)
-        prediction_mask = box_class_scores >= threshold
+    # def yolo_filter_boxes(self, box_confidence, boxes, box_class_probs, threshold=.6):
+    #     """Filter YOLO boxes based on object and class confidence."""
+    #     box_scores = box_confidence * box_class_probs
+    #     box_classes = K.argmax(box_scores, axis=-1)
+    #     box_class_scores = K.max(box_scores, axis=-1)
+    #     prediction_mask = box_class_scores >= threshold
 
-        # TODO: Expose tf.boolean_mask to Keras backend?
-        boxes = tf.boolean_mask(boxes, prediction_mask)
-        scores = tf.boolean_mask(box_class_scores, prediction_mask)
-        classes = tf.boolean_mask(box_classes, prediction_mask)
+    #     # TODO: Expose tf.boolean_mask to Keras backend?
+    #     boxes = tf.boolean_mask(boxes, prediction_mask)
+    #     scores = tf.boolean_mask(box_class_scores, prediction_mask)
+    #     classes = tf.boolean_mask(box_classes, prediction_mask)
 
-        return boxes, scores, classes
+    #     return boxes, scores, classes
 
     def scale_boxes(self, boxes, image_shape):
         """ Scales the predicted boxes in order to be drawable on the image"""
@@ -5062,7 +5063,160 @@ class Coding4_3(CodingWorks):
             logging.info("scores.shape = " + str(scores.eval().shape))
             logging.info("boxes.shape = " + str(boxes.eval().shape))
             logging.info("classes.shape = " + str(classes.eval().shape))
+
+    def tc5(self):
+        with tf.Session() as test_b:
+            x = tf.random_normal([19, 19, 5, 1], mean=1, stddev=4, seed = 1)
+            sess = tf.Session()
+            logging.info(sess.run(x))
+
+    def preprocess_image(self, img_path, model_image_size):
+        image_type = imghdr.what(img_path)
+        image = Image.open(img_path)
+        resized_image = image.resize(tuple(reversed(model_image_size)), Image.BICUBIC)
+        image_data = np.array(resized_image, dtype='float32')
+        image_data /= 255.
+        image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
+        return image, image_data
+
+    def predict(self, sess, image_file, scores, boxes, classes, yolo_model):
+        """
+        Runs the graph stored in "sess" to predict boxes for "image_file". Prints and plots the preditions.
         
+        Arguments:
+        sess -- your tensorflow/Keras session containing the YOLO graph
+        image_file -- name of an image stored in the "images" folder.
+        
+        Returns:
+        out_scores -- tensor of shape (None, ), scores of the predicted boxes
+        out_boxes -- tensor of shape (None, 4), coordinates of the predicted boxes
+        out_classes -- tensor of shape (None, ), class index of the predicted boxes
+        
+        Note: "None" actually represents the number of predicted boxes, it varies between 0 and max_boxes. 
+        """
+
+        # Preprocess your image
+        imagePath = os.path.join(self.rootDir, 'coding4_3/Car detection for Autonomous Driving/images/', image_file)
+        image, image_data = self.preprocess_image(imagePath, model_image_size = (608, 608))
+
+        # Run the session with the correct tensors and choose the correct placeholders in the feed_dict.
+        # You'll need to use feed_dict={yolo_model.input: ... , K.learning_phase(): 0})
+        ### START CODE HERE ### (≈ 1 line)
+        out_scores, out_boxes, out_classes = sess.run([scores, boxes, classes],feed_dict={yolo_model.input: image_data,K.learning_phase(): 0})
+        ### END CODE HERE ###
+
+        # Print predictions info
+        print('Found {} boxes for {}'.format(len(out_boxes), image_file))
+        # Generate colors for drawing bounding boxes.
+        colors = generate_colors(class_names)
+        # Draw bounding boxes on the image file
+        draw_boxes(image, out_scores, out_boxes, out_classes, class_names, colors)
+        # Save the predicted bounding box on the image
+        image.save(os.path.join("out", image_file), quality=90)
+        # Display the results in the notebook
+        output_image = scipy.misc.imread(os.path.join("out", image_file))
+        imshow(output_image)
+        
+        return out_scores, out_boxes, out_classes    
+
+    def read_classes(self, classes_path):
+        with open(classes_path) as f:
+            class_names = f.readlines()
+        class_names = [c.strip() for c in class_names]
+        return class_names
+            
+    def read_anchors(self, anchors_path):
+        with open(anchors_path) as f:
+            anchors = f.readline()
+            anchors = [float(x) for x in anchors.split(',')]
+            anchors = np.array(anchors).reshape(-1, 2)
+        return anchors
+
+    def yolo_head(self, feats, anchors, num_classes):
+        """Convert final layer features to bounding box parameters.
+
+        Parameters
+        ----------
+        feats : tensor
+            Final convolutional layer features.
+        anchors : array-like
+            Anchor box widths and heights.
+        num_classes : int
+            Number of target classes.
+
+        Returns
+        -------
+        box_xy : tensor
+            x, y box predictions adjusted by spatial location in conv layer.
+        box_wh : tensor
+            w, h box predictions adjusted by anchors and conv spatial resolution.
+        box_conf : tensor
+            Probability estimate for whether each box contains any object.
+        box_class_pred : tensor
+            Probability distribution estimate for each box over class labels.
+        """
+        num_anchors = len(anchors)
+        # Reshape to batch, height, width, num_anchors, box_params.
+        anchors_tensor = K.reshape(K.variable(anchors), [1, 1, 1, num_anchors, 2])
+        # Static implementation for fixed models.
+        # TODO: Remove or add option for static implementation.
+        # _, conv_height, conv_width, _ = K.int_shape(feats)
+        # conv_dims = K.variable([conv_width, conv_height])
+
+        # Dynamic implementation of conv dims for fully convolutional model.
+        conv_dims = K.shape(feats)[1:3]  # assuming channels last
+        # In YOLO the height index is the inner most iteration.
+        conv_height_index = K.arange(0, stop=conv_dims[0])
+        conv_width_index = K.arange(0, stop=conv_dims[1])
+        conv_height_index = K.tile(conv_height_index, [conv_dims[1]])
+
+        # TODO: Repeat_elements and tf.split doesn't support dynamic splits.
+        # conv_width_index = K.repeat_elements(conv_width_index, conv_dims[1], axis=0)
+        conv_width_index = K.tile(K.expand_dims(conv_width_index, 0), [conv_dims[0], 1])
+        conv_width_index = K.flatten(K.transpose(conv_width_index))
+        conv_index = K.transpose(K.stack([conv_height_index, conv_width_index]))
+        conv_index = K.reshape(conv_index, [1, conv_dims[0], conv_dims[1], 1, 2])
+        conv_index = K.cast(conv_index, K.dtype(feats))
+        
+        feats = K.reshape(feats, [-1, conv_dims[0], conv_dims[1], num_anchors, num_classes + 5])
+        conv_dims = K.cast(K.reshape(conv_dims, [1, 1, 1, 1, 2]), K.dtype(feats))
+
+        # Static generation of conv_index:
+        # conv_index = np.array([_ for _ in np.ndindex(conv_width, conv_height)])
+        # conv_index = conv_index[:, [1, 0]]  # swap columns for YOLO ordering.
+        # conv_index = K.variable(
+        #     conv_index.reshape(1, conv_height, conv_width, 1, 2))
+        # feats = Reshape(
+        #     (conv_dims[0], conv_dims[1], num_anchors, num_classes + 5))(feats)
+
+        box_confidence = K.sigmoid(feats[..., 4:5])
+        box_xy = K.sigmoid(feats[..., :2])
+        box_wh = K.exp(feats[..., 2:4])
+        box_class_probs = K.softmax(feats[..., 5:])
+
+        # Adjust preditions to each spatial grid point and anchor size.
+        # Note: YOLO iterates over height index before width index.
+        box_xy = (box_xy + conv_index) / conv_dims
+        box_wh = box_wh * anchors_tensor / conv_dims
+
+        return box_confidence, box_xy, box_wh, box_class_probs
+
+    def tc6(self):
+        sess = K.get_session()
+        classesPath = os.path.join(self.rootDir, 'coding4_3/Car detection for Autonomous Driving/model_data/coco_classes.txt')
+        class_names = self.read_classes(classesPath) # 80种可识别的类名
+        anchorsPath = os.path.join(self.rootDir, 'coding4_3/Car detection for Autonomous Driving/model_data/yolo_anchors.txt')
+        anchors = self.read_anchors(anchorsPath)     # 5种Anchors Box
+        image_shape = (720., 1280.)  
+        yoloPath = os.path.join(self.rootDir, 'coding4_3/Car detection for Autonomous Driving/model_data/yolo.h5')
+        yolo_model = load_model(yoloPath)
+        yolo_model.summary()
+        yolo_outputs = self.yolo_head(yolo_model.output, anchors, len(class_names))
+        scores, boxes, classes = self.yolo_eval(yolo_outputs, image_shape)
+        testImagePath = os.path.join(self.rootDir, 'coding4_3/Car detection for Autonomous Driving/images/test.jpg')
+        out_scores, out_boxes, out_classes = self.predict(sess, testImagePath, scores, boxes, classes, yolo_model)
+
+
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=logFmt, datefmt='%H:%M',)
