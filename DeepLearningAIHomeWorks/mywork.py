@@ -4984,20 +4984,6 @@ class Coding4_3(CodingWorks):
         # y_min, x_min, y_max, x_max
         return K.concatenate([box_mins[..., 1:2], box_mins[..., 0:1], 
                             box_maxes[..., 1:2], box_maxes[..., 0:1]])
-              
-    # def yolo_filter_boxes(self, box_confidence, boxes, box_class_probs, threshold=.6):
-    #     """Filter YOLO boxes based on object and class confidence."""
-    #     box_scores = box_confidence * box_class_probs
-    #     box_classes = K.argmax(box_scores, axis=-1)
-    #     box_class_scores = K.max(box_scores, axis=-1)
-    #     prediction_mask = box_class_scores >= threshold
-
-    #     # TODO: Expose tf.boolean_mask to Keras backend?
-    #     boxes = tf.boolean_mask(boxes, prediction_mask)
-    #     scores = tf.boolean_mask(box_class_scores, prediction_mask)
-    #     classes = tf.boolean_mask(box_classes, prediction_mask)
-
-    #     return boxes, scores, classes
 
     def scale_boxes(self, boxes, image_shape):
         """ Scales the predicted boxes in order to be drawable on the image"""
@@ -5064,12 +5050,6 @@ class Coding4_3(CodingWorks):
             logging.info("boxes.shape = " + str(boxes.eval().shape))
             logging.info("classes.shape = " + str(classes.eval().shape))
 
-    def tc5(self):
-        with tf.Session() as test_b:
-            x = tf.random_normal([19, 19, 5, 1], mean=1, stddev=4, seed = 1)
-            sess = tf.Session()
-            logging.info(sess.run(x))
-
     def preprocess_image(self, img_path, model_image_size):
         image_type = imghdr.what(img_path)
         image = Image.open(img_path)
@@ -5079,7 +5059,7 @@ class Coding4_3(CodingWorks):
         image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
         return image, image_data
 
-    def predict(self, sess, image_file, scores, boxes, classes, yolo_model):
+    def predict(self, sess, image_file, scores, boxes, classes):
         """
         Runs the graph stored in "sess" to predict boxes for "image_file". Prints and plots the preditions.
         
@@ -5101,9 +5081,8 @@ class Coding4_3(CodingWorks):
 
         # Run the session with the correct tensors and choose the correct placeholders in the feed_dict.
         # You'll need to use feed_dict={yolo_model.input: ... , K.learning_phase(): 0})
-        ### START CODE HERE ### (≈ 1 line)
-        out_scores, out_boxes, out_classes = sess.run([scores, boxes, classes],feed_dict={yolo_model.input: image_data,K.learning_phase(): 0})
-        ### END CODE HERE ###
+        out_scores, out_boxes, out_classes = sess.run([scores, boxes, classes],
+                                            feed_dict = {yolo_model.input: image_data, K.learning_phase(): 0})
 
         # Print predictions info
         print('Found {} boxes for {}'.format(len(out_boxes), image_file))
@@ -5201,7 +5180,7 @@ class Coding4_3(CodingWorks):
 
         return box_confidence, box_xy, box_wh, box_class_probs
 
-    def tc6(self):
+    def tc5(self):
         sess = K.get_session()
         classesPath = os.path.join(self.rootDir, 'coding4_3/Car detection for Autonomous Driving/model_data/coco_classes.txt')
         class_names = self.read_classes(classesPath) # 80种可识别的类名
@@ -5214,8 +5193,7 @@ class Coding4_3(CodingWorks):
         yolo_outputs = self.yolo_head(yolo_model.output, anchors, len(class_names))
         scores, boxes, classes = self.yolo_eval(yolo_outputs, image_shape)
         testImagePath = os.path.join(self.rootDir, 'coding4_3/Car detection for Autonomous Driving/images/test.jpg')
-        out_scores, out_boxes, out_classes = self.predict(sess, testImagePath, scores, boxes, classes, yolo_model)
-
+        out_scores, out_boxes, out_classes = self.predict(sess, testImagePath, scores, boxes, classes)
 
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'

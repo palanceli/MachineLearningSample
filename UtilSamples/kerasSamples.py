@@ -4,77 +4,46 @@
 import unittest
 import logging
 import os
-import numpy as np
-import scipy.interpolate
-import matplotlib
-import matplotlib.pyplot as plt
 
-import pandas as pd
-import PIL
-import h5py
-from matplotlib.pyplot import imshow
-import scipy
-import scipy.io
-import scipy.misc
-from PIL import Image
-from scipy import ndimage
-import sklearn
-import sklearn.datasets
-import sklearn.linear_model
-import tensorflow as tf
-from tensorflow.python.framework import ops
-
-from keras import layers
-from keras.layers import Input, Lambda, Add, Dense, Activation, ZeroPadding2D, BatchNormalization, Flatten, Conv2D
-from keras.layers import AveragePooling2D, MaxPooling2D, Dropout, GlobalMaxPooling2D, GlobalAveragePooling2D
-from keras.models import Model, load_model
-from keras.preprocessing import image
-from keras.utils import layer_utils
-from keras.utils.data_utils import get_file
-from keras.applications.imagenet_utils import preprocess_input
-import pydot
-from IPython.display import SVG
-from keras.utils.vis_utils import model_to_dot
-from keras.utils import plot_model
-from keras.initializers import glorot_uniform
-
-import keras.backend as K
-from matplotlib.pyplot import imshow
+import keras
+from keras.layers import Dense, Dropout, Activation
 from keras.models import Sequential
+from keras.optimizers import SGD
+import numpy as np
 
 class Samples(unittest.TestCase):
     def setUp(self):
         logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
         logging.basicConfig(level=logging.DEBUG, format=logFmt, datefmt='%H:%M',)
-        self.rootDir = os.path.join(os.path.expanduser('~'), 'Documents/DeepLearningAI作业/')
-        np.random.seed(1)
-        plt.switch_backend('Qt5Agg') # 在独立窗口中弹出绘图，而不是和命令行共用一个窗口
-        # plt.subplots(figsize=(5,4))  # 调整窗口大小
-        plt.rcParams['figure.figsize'] = (5.0, 4.0)
-        plt.rcParams['image.interpolation'] = 'nearest'
-        plt.rcParams['image.cmap'] = 'gray'
-
-        K.set_image_data_format('channels_last')
-        K.set_learning_phase(1)
 
     def tc1(self):
+        # 构造训练集和测试集
+        x_train = np.random.random((1000, 20))
+        y_train = keras.utils.to_categorical(np.random.randint(10, size=(1000, 1)), num_classes=10)
+        x_test = np.random.random((100, 20))
+        y_test = keras.utils.to_categorical(np.random.randint(10, size=(100, 1)), num_classes=10)
+
+        # 1.构建模型
         model = Sequential()
-        model.add(Dense(32, activation='relu', input_dim=100))
-        model.add(Dense(1, activation='sigmoid'))
-        model.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics=['accuracy'])
+        # 第一个隐藏层共64个节点，接收20个输入节点
+        model.add(Dense(64, activation='relu', input_dim=20)) 
+        model.add(Dropout(0.5))
+        model.add(Dense(64, activation='relu')) # 第二个隐藏层64个节点
+        model.add(Dropout(0.5))
+        model.add(Dense(10, activation='softmax'))  # 输出层10个节点
 
-        # Generate dummy data
-        import numpy as np
-        data = np.random.random((1000, 100))
-        labels = np.random.randint(2, size=(1000, 1))
-
-        # Train the model, iterating on the data in batches of 32 samples
-        model.fit(data, labels, epochs=10, batch_size=32)
-        # 将happyModel转成图片，需要安装Graphviz:
-        # brew install graphviz
-        plot_model(model, to_file='model.png')
-        SVG(model_to_dot(model).create(prog='dot', format='svg'))
-
+        # 2. 编译模型
+        sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+        model.compile(loss='categorical_crossentropy',
+                    optimizer=sgd,
+                    metrics=['accuracy'])
+        # 3. 训练网络
+        model.fit(x_train, y_train, epochs=20, batch_size=128)
+        # 4. 评估模型
+        score = model.evaluate(x_test, y_test, batch_size=128)
+        # 5. 预测新数据
+        result = model.predict( np.random.random((1, 20)))
+        logging.info(result)
 if __name__ == '__main__':
     logFmt = '%(asctime)s %(lineno)04d %(levelname)-8s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=logFmt, datefmt='%H:%M',)
