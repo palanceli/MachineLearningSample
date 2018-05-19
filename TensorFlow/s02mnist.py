@@ -40,6 +40,7 @@ class Samples(unittest.TestCase):
         
     def tc1(self):
         mnist = self.loadData()
+        # mnist = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
         logging.info(mnist.train.images.shape)          # 训练集：55,000 × 784
         logging.info(mnist.validation.images.shape)     # 开发集：5,000 × 784
         logging.info(mnist.test.images.shape)           # 测试集：10,000 × 784
