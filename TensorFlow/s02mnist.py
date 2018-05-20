@@ -93,7 +93,6 @@ class MnistAdv(MnistBase):
     def max_pool_2x2(self, x):
         ''' 构造池化层 '''
         # ksize定义池化窗口大小：2×2；strides定义步长：2×2
-        # 池化后大小为(n-2+1)/(2+1)
         return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
                         strides=[1, 2, 2, 1], padding='SAME')
 
